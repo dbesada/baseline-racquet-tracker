@@ -11,7 +11,10 @@ const feeds = [
   ["RaquetteVille", "https://raquetteville.ca", "https://raquetteville.ca/collections/tennis-racquets/products.json?limit=250"],
   ["Yumo Pro Shop", "https://yumo.ca", "https://yumo.ca/collections/tennis-rackets/products.json?limit=250"],
   ["Prince Canada", "https://princecanada.ca", "https://princecanada.ca/collections/racquets/products.json?limit=250"],
+  ["Amazon.ca", "https://www.amazon.ca", "https://www.amazon.ca/s?k=tennis+racket+grip+3+sale", "amazon"],
+  ["Amazon.com", "https://www.amazon.com", "https://www.amazon.com/s?k=tennis+racket+grip+3+sale", "amazon"],
 ];
+const amazonSearches = ["Wilson Blade 98", "Yonex EZONE 98", "Babolat Pure Aero 98"];
 
 const modelNames = {
   "blade-v8": "Wilson Blade 98 v8",
@@ -42,7 +45,39 @@ function isAccessory(title) {
   return /\b(demo|used|grommet|junior|jr|bag|cover|case|string|grip|overgrip|shoe|sock|apparel|hat)\b/i.test(title);
 }
 
-async function fetchStore([store, origin, url]) {
+function parseAmazonPrice(block) {
+  const whole = block.match(/a-price-whole[^>]*>\s*([\d,]+)/i)?.[1];
+  if (!whole) return null;
+  const fraction = block.match(/a-price-fraction[^>]*>\s*(\d{2})/i)?.[1] ?? "00";
+  const price = Number(`${whole.replace(/,/g, "")}.${fraction}`);
+  return Number.isFinite(price) ? price : null;
+}
+
+async function fetchAmazon(store, origin) {
+  const offers = [];
+  for (const search of amazonSearches) {
+    const response = await fetch(`${origin}/s?k=${encodeURIComponent(`${search} grip 3`)}`, {
+      headers: { accept: "text/html,application/xhtml+xml", "accept-language": "en-CA,en;q=0.8", "user-agent": "Mozilla/5.0 (compatible; BaselinePriceTracker/1.0)" },
+      signal: AbortSignal.timeout(20000),
+    });
+    if (!response.ok) throw new Error(`${store}: HTTP ${response.status}`);
+    const html = await response.text();
+    for (const block of html.split(/data-asin="/i).slice(1)) {
+      const asin = block.split('"', 1)[0];
+      if (!/^[A-Z0-9]{10}$/.test(asin)) continue;
+      const title = block.match(/a-size-(?:medium|base-plus)[^>]*>\s*([^<]{8,180})/i)?.[1]?.trim();
+      const price = title ? parseAmazonPrice(block) : null;
+      if (!title || price === null) continue;
+      const modelKey = classify(title);
+      if (!modelKey) continue;
+      offers.push({ id: `${store}:${asin}`, modelKey, store, title, price, compareAtPrice: null, url: `${origin}/dp/${asin}` });
+    }
+  }
+  return [...new Map(offers.map((offer) => [offer.id, offer])).values()];
+}
+
+async function fetchStore([store, origin, url, kind]) {
+  if (kind === "amazon") return fetchAmazon(store, origin);
   const response = await fetch(url, {
     headers: { accept: "application/json", "user-agent": "BaselinePriceTracker/1.0" },
     signal: AbortSignal.timeout(20000),
@@ -75,7 +110,16 @@ async function readPrevious() {
 }
 
 const previous = await readPrevious();
-const settled = await Promise.allSettled(feeds.map(fetchStore));
+let enabledNames = null;
+try {
+  const settingsResponse = await fetch("http://localhost:3000/api/tracker", { signal: AbortSignal.timeout(3000) });
+  const settings = await settingsResponse.json();
+  enabledNames = new Set((settings.retailers ?? []).filter((retailer) => retailer.enabled).map((retailer) => retailer.name));
+} catch {
+  // The standalone monitor can still run when the local UI server is offline.
+}
+const activeFeeds = enabledNames ? feeds.filter(([store]) => enabledNames.has(store)) : feeds;
+const settled = await Promise.allSettled(activeFeeds.map(fetchStore));
 const offers = settled.flatMap((result) => result.status === "fulfilled" ? result.value : []);
 const current = Object.fromEntries(offers.map((offer) => [offer.id, offer]));
 const drops = offers.filter((offer) => previous.offers[offer.id]?.price > offer.price).map((offer) => ({
@@ -101,6 +145,7 @@ await writeFile(statePath, JSON.stringify({
 console.log(JSON.stringify({
   checkedAt: new Date().toISOString(),
   storesChecked: settled.filter((result) => result.status === "fulfilled").length,
+  retailersChecked: activeFeeds.map(([store]) => store),
   failures: settled.filter((result) => result.status === "rejected").map((result) => result.reason?.message ?? "Unknown store failure"),
   offersFound: offers.length,
   drops: drops.map((offer) => ({ ...offer, model: modelNames[offer.modelKey] })),

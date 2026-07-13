@@ -24,6 +24,7 @@ type Dashboard = {
   history: Array<{ modelKey: string; price: number; checkedAt: string }>;
   modelNames: Record<string, string>;
   stores: string[];
+  retailers: Array<{ key: string; name: string; enabled: boolean; kind: string }>;
 };
 
 const modelOrder = ["blade-v8", "blade-v9", "ezone-98", "pure-aero-98"];
@@ -54,6 +55,7 @@ export function BaselineApp() {
   const [notifications, setNotifications] = useState(false);
   const [editing, setEditing] = useState<string | null>(null);
   const [targetDraft, setTargetDraft] = useState("");
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   const load = useCallback(async () => {
     const response = await fetch("/api/tracker", { cache: "no-store" });
@@ -121,6 +123,15 @@ export function BaselineApp() {
     setEditing(null);
   };
 
+  const toggleRetailer = async (retailerKey: string, enabled: boolean) => {
+    const response = await fetch("/api/tracker", {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ retailerKey, enabled }),
+    });
+    if (response.ok) setData(await response.json());
+  };
+
   return (
     <main>
       <header className="topbar">
@@ -130,6 +141,7 @@ export function BaselineApp() {
         </a>
         <div className="top-actions">
           <span className="status-dot"><i /> Watching {data?.stores.length ?? 5} stores</span>
+          <button className="settings-button" onClick={() => setSettingsOpen(true)} aria-label="Open tracker settings">Settings</button>
           <button className={`alert-toggle ${notifications ? "on" : ""}`} onClick={toggleNotifications}>
             <span aria-hidden="true">{notifications ? "●" : "○"}</span>
             {notifications ? "Alerts on" : "Turn on alerts"}
@@ -137,11 +149,40 @@ export function BaselineApp() {
         </div>
       </header>
 
+      {settingsOpen && (
+        <div className="settings-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setSettingsOpen(false); }}>
+          <aside className="settings-panel" role="dialog" aria-modal="true" aria-labelledby="settings-title">
+            <div className="settings-panel-head">
+              <div><p className="eyebrow">BASELINE CONTROL ROOM</p><h2 id="settings-title">Settings</h2></div>
+              <button className="close-settings" onClick={() => setSettingsOpen(false)} aria-label="Close settings">×</button>
+            </div>
+            <div className="settings-block">
+              <span className="settings-label">CHECK FREQUENCY</span>
+              <div className="frequency-card"><strong>Every hour</strong><span>Automatic checks run hourly. You can still check manually anytime.</span></div>
+            </div>
+            <div className="settings-block">
+              <span className="settings-label">RETAILERS</span>
+              <p className="settings-help">Disable a store to skip it during checks and remove its listings from the comparison.</p>
+              <div className="retailer-list">
+                {(data?.retailers ?? []).map((retailer) => (
+                  <label className="retailer-toggle" key={retailer.key}>
+                    <span><strong>{retailer.name}</strong>{retailer.kind === "amazon" && <small>Best-effort marketplace search</small>}</span>
+                    <input type="checkbox" checked={retailer.enabled} onChange={(event) => toggleRetailer(retailer.key, event.target.checked)} />
+                    <i aria-hidden="true" />
+                  </label>
+                ))}
+              </div>
+            </div>
+            <p className="settings-footnote">All matches are filtered to new, in-stock grip size 3 (L3 / 4⅜). Amazon can throttle automated searches, so those feeds may occasionally report no results.</p>
+          </aside>
+        </div>
+      )}
+
       <section className="hero" id="top">
         <div className="hero-copy">
           <p className="eyebrow">CANADIAN RACQUET PRICE TRACKER</p>
           <h1>Wait for the<br /><em>right bounce.</em></h1>
-          <p className="lede">Baseline watches the frames on your shortlist, checks five Canadian retailers, and calls the shot when the price drops.</p>
+          <p className="lede">Baseline watches the frames on your shortlist, checks enabled Canadian retailers every hour, and calls the shot when the price drops.</p>
           <div className="hero-actions">
             <button className="check-button" onClick={checkNow} disabled={checking}>
               <span className={checking ? "spin" : ""} aria-hidden="true">↻</span>
@@ -257,7 +298,7 @@ export function BaselineApp() {
       <section className="how-it-works">
         <p className="eyebrow">HOW IT WORKS</p>
         <div className="steps">
-          <div><span>01</span><strong>We check</strong><p>Five Canadian tennis retailers, every six hours.</p></div>
+          <div><span>01</span><strong>We check</strong><p>Enabled Canadian retailers, every hour.</p></div>
           <div><span>02</span><strong>We compare</strong><p>Only new, in-stock frames in CAD—no demo noise.</p></div>
           <div><span>03</span><strong>You save</strong><p>Set your price and jump directly to the retailer.</p></div>
         </div>

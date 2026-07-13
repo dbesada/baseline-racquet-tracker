@@ -19,9 +19,11 @@ type ShopifyProduct = {
 };
 
 type Feed = {
+  key: string;
   name: string;
   origin: string;
   url: string;
+  kind?: "shopify" | "amazon";
 };
 
 type ParsedOffer = {
@@ -38,56 +40,82 @@ type ParsedOffer = {
 
 const feeds: Feed[] = [
   {
+    key: "atr-sports",
     name: "ATR Sports",
     origin: "https://atrsports.com/en-ca",
     url: "https://atrsports.com/en-ca/collections/tennis-racquets/products.json?limit=250",
   },
   {
+    key: "just-tennis",
     name: "Just Tennis",
     origin: "https://www.justtennis.ca",
     url: "https://www.justtennis.ca/collections/racquets/products.json?limit=250",
   },
   {
+    key: "browns-sports",
     name: "Brown's Sports",
     origin: "https://www.brownssports.ca",
     url: "https://www.brownssports.ca/collections/tennis-racquets/products.json?limit=250",
   },
   {
+    key: "tads-sporting-goods",
     name: "Tads Sporting Goods",
     origin: "https://tadssportinggoods.ca",
     url: "https://tadssportinggoods.ca/collections/tennis-rackets/products.json?limit=250",
   },
   {
+    key: "courtside-racquets",
     name: "Courtside Racquets",
     origin: "https://courtsideracquets.ca",
     url: "https://courtsideracquets.ca/collections/racquets/products.json?limit=250",
   },
   {
+    key: "racquetguys",
     name: "RacquetGuys",
     origin: "https://racquetguys.ca",
     url: "https://racquetguys.ca/products.json?limit=250",
   },
   {
+    key: "merchant-of-tennis",
     name: "Merchant of Tennis",
     origin: "https://www.merchantoftennis.com",
     url: "https://www.merchantoftennis.com/collections/tennis-racquets/products.json?limit=250",
   },
   {
+    key: "raquetteville",
     name: "RaquetteVille",
     origin: "https://raquetteville.ca",
     url: "https://raquetteville.ca/collections/tennis-racquets/products.json?limit=250",
   },
   {
+    key: "yumo-pro-shop",
     name: "Yumo Pro Shop",
     origin: "https://yumo.ca",
     url: "https://yumo.ca/collections/tennis-rackets/products.json?limit=250",
   },
   {
+    key: "prince-canada",
     name: "Prince Canada",
     origin: "https://princecanada.ca",
     url: "https://princecanada.ca/collections/racquets/products.json?limit=250",
   },
+  {
+    key: "amazon-ca",
+    name: "Amazon.ca",
+    origin: "https://www.amazon.ca",
+    url: "https://www.amazon.ca/s?k=tennis+racket+grip+3+sale",
+    kind: "amazon",
+  },
+  {
+    key: "amazon-com",
+    name: "Amazon.com",
+    origin: "https://www.amazon.com",
+    url: "https://www.amazon.com/s?k=tennis+racket+grip+3+sale",
+    kind: "amazon",
+  },
 ];
+
+const amazonSearches = ["Wilson Blade 98", "Yonex EZONE 98", "Babolat Pure Aero 98"];
 
 const defaultTargets: Record<string, number> = {
   "blade-v8": 225,
@@ -128,6 +156,10 @@ async function ensureSchema() {
       stores_checked INTEGER NOT NULL, offers_found INTEGER NOT NULL,
       failures INTEGER NOT NULL
     )`),
+    database.prepare(`CREATE TABLE IF NOT EXISTS retailer_settings (
+      retailer_key TEXT PRIMARY KEY, retailer_name TEXT NOT NULL,
+      enabled INTEGER NOT NULL DEFAULT 1
+    )`),
     database.prepare("CREATE INDEX IF NOT EXISTS price_history_model_idx ON price_history(model_key, checked_at)"),
   ]);
 
@@ -136,6 +168,29 @@ async function ensureSchema() {
       database.prepare("INSERT OR IGNORE INTO targets (model_key, target_price) VALUES (?, ?)").bind(key, value),
     ),
   );
+  await database.batch(
+    feeds.map((feed) => database.prepare(
+      "INSERT OR IGNORE INTO retailer_settings (retailer_key, retailer_name, enabled) VALUES (?, ?, 1)",
+    ).bind(feed.key, feed.name)),
+  );
+}
+
+async function getRetailerSettings() {
+  await ensureSchema();
+  const result = await db().prepare(
+    "SELECT retailer_key AS key, retailer_name AS name, enabled FROM retailer_settings ORDER BY retailer_name",
+  ).all();
+  return ((result as D1Result<Record<string, unknown>>).results ?? []).map((row) => ({
+    ...row,
+    enabled: Boolean(row.enabled),
+    kind: feeds.find((feed) => feed.key === row.key)?.kind ?? "shopify",
+  }));
+}
+
+async function getEnabledFeeds() {
+  const settings = await getRetailerSettings();
+  const enabled = new Set(settings.filter((setting) => setting.enabled).map((setting) => setting.key));
+  return feeds.filter((feed) => enabled.has(feed.key));
 }
 
 function classify(title: string): string | null {
@@ -166,7 +221,54 @@ function cleanGrip(value: string) {
   return `4 ${match[1]}`;
 }
 
+function parseAmazonPrice(block: string) {
+  const whole = block.match(/a-price-whole[^>]*>\s*([\d,]+)/i)?.[1];
+  if (!whole) return null;
+  const fraction = block.match(/a-price-fraction[^>]*>\s*(\d{2})/i)?.[1] ?? "00";
+  const price = Number(`${whole.replace(/,/g, "")}.${fraction}`);
+  return Number.isFinite(price) ? price : null;
+}
+
+async function fetchAmazon(feed: Feed): Promise<ParsedOffer[]> {
+  const allOffers: ParsedOffer[] = [];
+  for (const search of amazonSearches) {
+    const response = await fetch(`${feed.origin}/s?k=${encodeURIComponent(`${search} grip 3`)}`, {
+      headers: {
+        accept: "text/html,application/xhtml+xml",
+        "accept-language": "en-CA,en;q=0.8",
+        "user-agent": "Mozilla/5.0 (compatible; BaselinePriceTracker/1.0)",
+      },
+      signal: AbortSignal.timeout(16000),
+    });
+    if (!response.ok) throw new Error(`${feed.name}: ${response.status}`);
+    const html = await response.text();
+    for (const block of html.split(/data-asin="/i).slice(1)) {
+      const asin = block.split('"', 1)[0];
+      if (!/^[A-Z0-9]{10}$/.test(asin)) continue;
+      const title = block.match(/a-size-(?:medium|base-plus)[^>]*>\s*([^<]{8,180})</i)?.[1]?.trim();
+      if (!title) continue;
+      const modelKey = classify(title);
+      if (!modelKey) continue;
+      const price = parseAmazonPrice(block);
+      if (price === null) continue;
+      allOffers.push({
+        id: `${feed.name}:${asin}`,
+        modelKey,
+        store: feed.name,
+        title,
+        url: `${feed.origin}/dp/${asin}`,
+        currentPrice: price,
+        compareAtPrice: null,
+        inStock: true,
+        gripSizes: ["L3 (search-filtered)"],
+      });
+    }
+  }
+  return [...new Map(allOffers.map((offer) => [offer.id, offer])).values()];
+}
+
 async function fetchFeed(feed: Feed): Promise<ParsedOffer[]> {
+  if (feed.kind === "amazon") return fetchAmazon(feed);
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 14000);
   try {
@@ -217,7 +319,8 @@ async function fetchFeed(feed: Feed): Promise<ParsedOffer[]> {
 async function runCheck() {
   await ensureSchema();
   const checkedAt = new Date().toISOString();
-  const results = await Promise.allSettled(feeds.map(fetchFeed));
+  const enabledFeeds = await getEnabledFeeds();
+  const results = await Promise.allSettled(enabledFeeds.map(fetchFeed));
   const offers = results.flatMap((result) => result.status === "fulfilled" ? result.value : []);
   const database = db();
 
@@ -250,7 +353,7 @@ async function runCheck() {
 
   await database.prepare(
     "INSERT INTO checks (checked_at, stores_checked, offers_found, failures) VALUES (?, ?, ?, ?)",
-  ).bind(checkedAt, feeds.length, offers.length, results.filter((result) => result.status === "rejected").length).run();
+  ).bind(checkedAt, enabledFeeds.length, offers.length, results.filter((result) => result.status === "rejected").length).run();
 
   return getDashboard();
 }
@@ -258,7 +361,7 @@ async function runCheck() {
 async function getDashboard() {
   await ensureSchema();
   const database = db();
-  const [offersResult, targetsResult, checksResult, historyResult] = await Promise.all([
+  const [offersResult, targetsResult, checksResult, historyResult, retailerSettings] = await Promise.all([
     database.prepare(`SELECT id, model_key AS modelKey, store, title, url,
       current_price AS currentPrice, previous_price AS previousPrice,
       compare_at_price AS compareAtPrice, in_stock AS inStock,
@@ -268,6 +371,7 @@ async function getDashboard() {
     database.prepare("SELECT checked_at AS checkedAt, stores_checked AS storesChecked, offers_found AS offersFound, failures FROM checks ORDER BY id DESC LIMIT 1").first(),
     database.prepare(`SELECT model_key AS modelKey, MIN(price) AS price, checked_at AS checkedAt
       FROM price_history GROUP BY model_key, checked_at ORDER BY checked_at DESC LIMIT 60`).all(),
+    getRetailerSettings(),
   ]);
 
   const offers = ((offersResult as D1Result<Record<string, unknown>>).results ?? []).map((offer) => ({
@@ -291,7 +395,8 @@ async function getDashboard() {
     lastCheck: checksResult ?? null,
     history: (historyResult as D1Result).results ?? [],
     modelNames,
-    stores: feeds.map((feed) => feed.name),
+    retailers: retailerSettings,
+    stores: retailerSettings.filter((retailer) => retailer.enabled).map((retailer) => retailer.name),
   });
 }
 
@@ -307,7 +412,15 @@ export async function POST(request: Request) {
 
 export async function PATCH(request: Request) {
   await ensureSchema();
-  const body = await request.json() as { modelKey?: string; targetPrice?: number };
+  const body = await request.json() as { modelKey?: string; targetPrice?: number; retailerKey?: string; enabled?: boolean };
+  if (body.retailerKey) {
+    if (!feeds.some((feed) => feed.key === body.retailerKey) || typeof body.enabled !== "boolean") {
+      return Response.json({ error: "Invalid retailer setting" }, { status: 400 });
+    }
+    await db().prepare("UPDATE retailer_settings SET enabled = ? WHERE retailer_key = ?")
+      .bind(body.enabled ? 1 : 0, body.retailerKey).run();
+    return getDashboard();
+  }
   if (!body.modelKey || !(body.modelKey in defaultTargets) || !Number.isFinite(body.targetPrice) || Number(body.targetPrice) < 1) {
     return Response.json({ error: "Invalid target" }, { status: 400 });
   }

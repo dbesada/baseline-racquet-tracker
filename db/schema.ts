@@ -34,3 +34,9 @@ export const checks = sqliteTable("checks", {
   offersFound: integer("offers_found").notNull(),
   failures: integer("failures").notNull(),
 });
+
+export const retailerSettings = sqliteTable("retailer_settings", {
+  retailerKey: text("retailer_key").primaryKey(),
+  retailerName: text("retailer_name").notNull(),
+  enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),
+});
