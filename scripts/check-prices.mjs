@@ -46,6 +46,11 @@ function isAccessory(title) {
 }
 
 function parseAmazonPrice(block) {
+  const offscreen = block.match(/a-offscreen[^>]*>\s*[$€£]?\s*([\d,]+(?:\.\d{2})?)/i)?.[1];
+  if (offscreen) {
+    const parsed = Number(offscreen.replace(/,/g, ""));
+    if (Number.isFinite(parsed)) return parsed;
+  }
   const whole = block.match(/a-price-whole[^>]*>\s*([\d,]+)/i)?.[1];
   if (!whole) return null;
   const fraction = block.match(/a-price-fraction[^>]*>\s*(\d{2})/i)?.[1] ?? "00";
@@ -65,7 +70,7 @@ async function fetchAmazon(store, origin) {
     for (const block of html.split(/data-asin="/i).slice(1)) {
       const asin = block.split('"', 1)[0];
       if (!/^[A-Z0-9]{10}$/.test(asin)) continue;
-      const title = block.match(/a-size-(?:medium|base-plus)[^>]*>\s*([^<]{8,180})/i)?.[1]?.trim();
+      const title = block.match(/(?:a-truncate-full|a-size-(?:medium|base-plus)[^>]*a-text-normal)[^>]*>\s*([^<]{8,180})/i)?.[1]?.trim();
       const price = title ? parseAmazonPrice(block) : null;
       if (!title || price === null) continue;
       const modelKey = classify(title);
