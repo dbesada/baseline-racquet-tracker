@@ -23,7 +23,7 @@ type Dashboard = {
   lastCheck: null | { checkedAt: string; storesChecked: number; offersFound: number; failures: number };
   history: Array<{ modelKey: string; price: number; checkedAt: string }>;
   modelNames: Record<string, string>;
-  modelOptions: Record<string, string>;
+  modelOptions: Array<{ key: string; name: string; topRated: boolean }>;
   modelOrder: string[];
   stores: string[];
   retailers: Array<{ key: string; name: string; enabled: boolean; kind: string }>;
@@ -32,6 +32,7 @@ type Dashboard = {
 const accents: Record<string, string> = {
   "blade-v10": "mint",
   "blade-v9": "forest",
+  "blade-v8": "mint",
   "ezone-98": "blue",
   "pure-aero-98": "yellow",
 };
@@ -168,13 +169,22 @@ export function BaselineApp() {
             </div>
             <div className="settings-block">
               <span className="settings-label">YOUR TOP FRAMES</span>
-              <p className="settings-help">Swap any slot for another model. Targets and price history stay attached to the selected model.</p>
+              <p className="settings-help">Choose six unique frames. Top-rated options are current 2026 playtest picks confirmed in Canadian L3 inventory.</p>
               <div className="retailer-list">
                 {(data?.modelOrder ?? []).map((modelKey, slot) => (
                   <label className="retailer-toggle" key={`slot-${slot}`}>
                     <span><strong>Slot {slot + 1}</strong><small>{data?.modelNames[modelKey] ?? modelKey}</small></span>
                     <select value={modelKey} onChange={(event) => replaceFrame(slot, event.target.value)} aria-label={`Replace frame slot ${slot + 1}`}>
-                      {Object.entries(data?.modelOptions ?? {}).map(([key, name]) => <option value={key} key={key}>{name}</option>)}
+                      <optgroup label="Top-rated & available">
+                        {(data?.modelOptions ?? []).filter((option) => option.topRated).map((option) => (
+                          <option value={option.key} key={option.key} disabled={data?.modelOrder.some((selected, selectedSlot) => selectedSlot !== slot && selected === option.key)}>{option.name}</option>
+                        ))}
+                      </optgroup>
+                      <optgroup label="More tracked frames">
+                        {(data?.modelOptions ?? []).filter((option) => !option.topRated).map((option) => (
+                          <option value={option.key} key={option.key} disabled={data?.modelOrder.some((selected, selectedSlot) => selectedSlot !== slot && selected === option.key)}>{option.name}</option>
+                        ))}
+                      </optgroup>
                     </select>
                   </label>
                 ))}
@@ -233,7 +243,7 @@ export function BaselineApp() {
         <div className="section-heading">
           <div>
             <p className="eyebrow">YOUR WATCHLIST</p>
-            <h2>Four frames. Best price wins.</h2>
+            <h2>Six frames. Best price wins.</h2>
           </div>
           <div className="legend"><span className="deal-dot" /> Below target <span className="stock-dot" /> In stock</div>
         </div>
@@ -249,7 +259,7 @@ export function BaselineApp() {
             const max = Math.max(...history.map((row) => row.price), 1);
             const min = Math.min(...history.map((row) => row.price), max);
             return (
-              <article className={`model-card ${accents[modelKey] ?? "blue"}`} key={modelKey} style={{ "--delay": `${index * 70}ms` } as React.CSSProperties}>
+              <article className={`model-card ${accents[modelKey] ?? "blue"}`} key={`${modelKey}-${index}`} style={{ "--delay": `${index * 70}ms` } as React.CSSProperties}>
                 <div className="card-top">
                   <span className="model-number">0{index + 1}</span>
                   <span className={`deal-pill ${belowTarget ? "hit" : ""}`}>{belowTarget ? "Target hit" : "Watching"}</span>

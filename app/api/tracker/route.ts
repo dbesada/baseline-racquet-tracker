@@ -140,26 +140,56 @@ const amazonSearches = ["Wilson Blade 98", "Yonex EZONE 98", "Babolat Pure Aero 
 const defaultTargets: Record<string, number> = {
   "blade-v10": 275,
   "blade-v9": 275,
+  "blade-v8": 225,
   "ezone-98": 300,
+  "ezone-100": 260,
   "pure-aero-98": 300,
+  "pure-aero-100": 260,
   "clash-100": 250,
   "vcore-98": 275,
+  "vcore-100": 260,
   "pure-drive-98": 275,
+  "pure-drive-100": 260,
   "pro-staff-97": 275,
+  "gravity-mp-2025": 260,
+  "tf40-290": 230,
+  "cx-400-tour": 230,
+  "radical-mp-2025": 260,
+  "speed-pro-2026": 275,
+  "rf-01-pro": 300,
+  "gravity-tour-2025": 275,
 };
 
 const modelNames: Record<string, string> = {
   "blade-v10": "Wilson Blade 98 v10",
   "blade-v9": "Wilson Blade 98 v9",
+  "blade-v8": "Wilson Blade 98 v8",
   "ezone-98": "Yonex EZONE 98",
+  "ezone-100": "Yonex EZONE 100 (2025)",
   "pure-aero-98": "Babolat Pure Aero 98",
+  "pure-aero-100": "Babolat Pure Aero (2026)",
   "clash-100": "Wilson Clash 100",
   "vcore-98": "Yonex VCORE 98",
+  "vcore-100": "Yonex VCORE 100 8th Gen",
   "pure-drive-98": "Babolat Pure Drive 98",
+  "pure-drive-100": "Babolat Pure Drive (2025)",
   "pro-staff-97": "Wilson Pro Staff 97",
+  "gravity-mp-2025": "Head Gravity MP 2025",
+  "tf40-290": "Tecnifibre TF40 290",
+  "cx-400-tour": "Dunlop CX 400 Tour",
+  "radical-mp-2025": "Head Radical MP 2025",
+  "speed-pro-2026": "Head Speed Pro 2026",
+  "rf-01-pro": "Wilson RF 01 Pro",
+  "gravity-tour-2025": "Head Gravity Tour 2025",
 };
 
-const defaultModelOrder = ["blade-v10", "blade-v9", "ezone-98", "pure-aero-98"];
+const topRatedModelKeys = new Set([
+  "blade-v9", "ezone-98", "ezone-100", "pure-aero-98", "pure-aero-100",
+  "clash-100", "vcore-98", "vcore-100", "pure-drive-100", "gravity-mp-2025",
+  "tf40-290", "cx-400-tour", "speed-pro-2026", "rf-01-pro", "gravity-tour-2025",
+]);
+const defaultModelOrder = ["blade-v10", "blade-v9", "blade-v8", "ezone-98", "pure-aero-98", "speed-pro-2026"];
+const shortlistSlotCount = 6;
 
 function db() {
   return env.DB as D1Database;
@@ -230,17 +260,32 @@ async function getEnabledFeeds() {
 }
 
 function classify(title: string): string | null {
+  const raw = title.toLowerCase();
   const normalized = title.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
   if (/\b(demo|used|grommet|junior|jr)\b/.test(normalized)) return null;
-  if (/\b(98l|98 tour)\b/.test(normalized)) return null;
+  if (/\b(98l|98 tour|100l|100 l|100ul|100 ul|100sl|100 sl|mp l|team|lite|rafa|x2|2 pack)\b/.test(normalized) || raw.includes("+")) return null;
+  if (/pure drive (?:107|110)\b/.test(normalized)) return null;
+  if (/\b(clash 100 pro|vcore 98 tour)\b/.test(normalized)) return null;
   if (/blade 98/.test(normalized) && /\bv10\b/.test(normalized)) return "blade-v10";
   if (/blade 98/.test(normalized) && /\bv9\b/.test(normalized)) return "blade-v9";
+  if (/blade 98/.test(normalized) && /\bv8\b/.test(normalized)) return "blade-v8";
   if (/ezone 98\b/.test(normalized)) return "ezone-98";
+  if (/ezone 100\b.*\b(?:8th gen|2025|blast blue)\b/.test(normalized)) return "ezone-100";
   if (/pure aero 98\b/.test(normalized)) return "pure-aero-98";
-  if (/clash 100\b/.test(normalized)) return "clash-100";
+  if (/pure aero(?: 100)?\b.*\b(?:2026|gen ?9|9th generation)\b/.test(normalized)) return "pure-aero-100";
+  if (/clash 100\b.*\bv3\b/.test(normalized)) return "clash-100";
   if (/vcore 98\b/.test(normalized)) return "vcore-98";
+  if (/vcore 100\b.*\b(?:8th gen|2026)\b/.test(normalized)) return "vcore-100";
   if (/pure drive 98\b/.test(normalized)) return "pure-drive-98";
+  if (/pure drive(?: 100)?\b.*\b(?:2025|gen 11|generation 11)\b/.test(normalized)) return "pure-drive-100";
   if (/pro staff 97\b/.test(normalized)) return "pro-staff-97";
+  if (/gravity mp 2025\b/.test(normalized)) return "gravity-mp-2025";
+  if (/tf 40 290\b|tf40 290\b/.test(normalized)) return "tf40-290";
+  if (/cx 400 tour\b/.test(normalized)) return "cx-400-tour";
+  if (/radical mp 2025\b/.test(normalized)) return "radical-mp-2025";
+  if (/speed pro (?:2026|legend 2025)\b/.test(normalized)) return "speed-pro-2026";
+  if (/rf 01 pro\b/.test(normalized)) return "rf-01-pro";
+  if (/gravity tour 2025\b/.test(normalized)) return "gravity-tour-2025";
   return null;
 }
 
@@ -443,7 +488,7 @@ async function getDashboard() {
     lastCheck: checksResult ?? null,
     history: (historyResult as D1Result).results ?? [],
     modelNames,
-    modelOptions: modelNames,
+    modelOptions: Object.entries(modelNames).map(([key, name]) => ({ key, name, topRated: topRatedModelKeys.has(key) })),
     modelOrder: shortlist.length ? shortlist : defaultModelOrder,
     retailers: retailerSettings,
     stores: retailerSettings.filter((retailer) => retailer.enabled && retailer.kind !== "manual").map((retailer) => retailer.name),
@@ -472,9 +517,12 @@ export async function PATCH(request: Request) {
     return getDashboard();
   }
   if (Number.isInteger(body.slot) && body.selectedModelKey) {
-    if (body.slot! < 0 || body.slot! > 3 || !(body.selectedModelKey in modelNames)) {
+    if (body.slot! < 0 || body.slot! >= shortlistSlotCount || !(body.selectedModelKey in modelNames)) {
       return Response.json({ error: "Invalid shortlist frame" }, { status: 400 });
     }
+    const duplicate = await db().prepare("SELECT slot FROM shortlist_slots WHERE model_key = ? AND slot <> ?")
+      .bind(body.selectedModelKey, body.slot).first();
+    if (duplicate) return Response.json({ error: "That frame is already on your shortlist" }, { status: 409 });
     await db().prepare("UPDATE shortlist_slots SET model_key = ? WHERE slot = ?")
       .bind(body.selectedModelKey, body.slot).run();
     return getDashboard();

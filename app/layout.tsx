@@ -25,7 +25,7 @@ export async function generateMetadata(): Promise<Metadata> {
       "Track Canadian prices for the Wilson Blade 98, Yonex EZONE 98, and Babolat Pure Aero 98.",
     openGraph: {
       title: "Baseline — Racquet prices, watched.",
-      description: "Five Canadian stores. Four racquets. One clean deal feed.",
+      description: "Canadian stores. Six racquets. One clean deal feed.",
       type: "website",
       images: [{ url: "/og.png", width: 1200, height: 630, alt: "Baseline racquet price tracker" }],
     },

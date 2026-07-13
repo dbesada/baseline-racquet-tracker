@@ -37,28 +37,64 @@ const amazonSearches = ["Wilson Blade 98", "Yonex EZONE 98", "Babolat Pure Aero 
 const modelNames = {
   "blade-v10": "Wilson Blade 98 v10",
   "blade-v9": "Wilson Blade 98 v9",
+  "blade-v8": "Wilson Blade 98 v8",
   "ezone-98": "Yonex EZONE 98",
+  "ezone-100": "Yonex EZONE 100 (2025)",
   "pure-aero-98": "Babolat Pure Aero 98",
+  "pure-aero-100": "Babolat Pure Aero (2026)",
   "clash-100": "Wilson Clash 100",
   "vcore-98": "Yonex VCORE 98",
+  "vcore-100": "Yonex VCORE 100 8th Gen",
   "pure-drive-98": "Babolat Pure Drive 98",
+  "pure-drive-100": "Babolat Pure Drive (2025)",
   "pro-staff-97": "Wilson Pro Staff 97",
+  "gravity-mp-2025": "Head Gravity MP 2025",
+  "tf40-290": "Tecnifibre TF40 290",
+  "cx-400-tour": "Dunlop CX 400 Tour",
+  "radical-mp-2025": "Head Radical MP 2025",
+  "speed-pro-2026": "Head Speed Pro 2026",
+  "rf-01-pro": "Wilson RF 01 Pro",
+  "gravity-tour-2025": "Head Gravity Tour 2025",
 };
 
-const targets = { "blade-v10": 275, "blade-v9": 275, "ezone-98": 300, "pure-aero-98": 300, "clash-100": 250, "vcore-98": 275, "pure-drive-98": 275, "pro-staff-97": 275 };
+const targets = {
+  "blade-v10": 275, "blade-v9": 275, "blade-v8": 225,
+  "ezone-98": 300, "ezone-100": 260,
+  "pure-aero-98": 300, "pure-aero-100": 260,
+  "clash-100": 250, "vcore-98": 275, "vcore-100": 260,
+  "pure-drive-98": 275, "pure-drive-100": 260, "pro-staff-97": 275,
+  "gravity-mp-2025": 260, "tf40-290": 230, "cx-400-tour": 230,
+  "radical-mp-2025": 260, "speed-pro-2026": 275, "rf-01-pro": 300,
+  "gravity-tour-2025": 275,
+};
 const statePath = new URL("../.data/baseline-monitor.json", import.meta.url);
 
 function classify(title) {
+  const raw = title.toLowerCase();
   const value = title.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
-  if (/\b(demo|used|grommet|junior|jr|98l|98 tour)\b/.test(value)) return null;
+  if (/\b(demo|used|grommet|junior|jr|98l|98 tour|100l|100 l|100ul|100 ul|100sl|100 sl|mp l|team|lite|rafa|x2|2 pack)\b/.test(value) || raw.includes("+")) return null;
+  if (/pure drive (?:107|110)\b/.test(value)) return null;
+  if (/\b(clash 100 pro|vcore 98 tour)\b/.test(value)) return null;
   if (/blade 98/.test(value) && /\bv10\b/.test(value)) return "blade-v10";
   if (/blade 98/.test(value) && /\bv9\b/.test(value)) return "blade-v9";
+  if (/blade 98/.test(value) && /\bv8\b/.test(value)) return "blade-v8";
   if (/ezone 98\b/.test(value)) return "ezone-98";
+  if (/ezone 100\b.*\b(?:8th gen|2025|blast blue)\b/.test(value)) return "ezone-100";
   if (/pure aero 98\b/.test(value)) return "pure-aero-98";
-  if (/clash 100\b/.test(value)) return "clash-100";
+  if (/pure aero(?: 100)?\b.*\b(?:2026|gen ?9|9th generation)\b/.test(value)) return "pure-aero-100";
+  if (/clash 100\b.*\bv3\b/.test(value)) return "clash-100";
   if (/vcore 98\b/.test(value)) return "vcore-98";
+  if (/vcore 100\b.*\b(?:8th gen|2026)\b/.test(value)) return "vcore-100";
   if (/pure drive 98\b/.test(value)) return "pure-drive-98";
+  if (/pure drive(?: 100)?\b.*\b(?:2025|gen 11|generation 11)\b/.test(value)) return "pure-drive-100";
   if (/pro staff 97\b/.test(value)) return "pro-staff-97";
+  if (/gravity mp 2025\b/.test(value)) return "gravity-mp-2025";
+  if (/tf 40 290\b|tf40 290\b/.test(value)) return "tf40-290";
+  if (/cx 400 tour\b/.test(value)) return "cx-400-tour";
+  if (/radical mp 2025\b/.test(value)) return "radical-mp-2025";
+  if (/speed pro (?:2026|legend 2025)\b/.test(value)) return "speed-pro-2026";
+  if (/rf 01 pro\b/.test(value)) return "rf-01-pro";
+  if (/gravity tour 2025\b/.test(value)) return "gravity-tour-2025";
   return null;
 }
 

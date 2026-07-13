@@ -96,7 +96,7 @@ h1 em { font-family: Georgia, 'Times New Roman', serif; font-weight: 400; color:
 h2 { margin: 0; font-size: clamp(2rem, 3.5vw, 3.6rem); letter-spacing: -.055em; line-height: 1; }
 .legend { font-size: .73rem; color: var(--muted); display: flex; align-items: center; gap: 8px; }
 .deal-dot { width: 8px; height: 8px; border-radius: 2px; background: var(--lime); border: 1px solid var(--forest); margin-left: 12px; }
-.model-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+.model-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
 .model-card { --card-accent: #b7d8c2; position: relative; background: #f8f6ef; border: 1px solid rgba(16,37,29,.12); border-radius: 22px; padding: 25px; overflow: hidden; animation: rise .45s ease both; animation-delay: var(--delay); }
 @keyframes rise { from { opacity: 0; transform: translateY(12px); } }
 .model-card::before { content: ""; position: absolute; inset: 0 0 auto 0; height: 5px; background: var(--card-accent); }
@@ -162,6 +162,10 @@ footer { min-height: 94px; padding: 20px 5vw; display: grid; grid-template-colum
 .footer-brand { color: white; }
 footer p { text-align: center; }
 footer > span { text-align: right; letter-spacing: .12em; }
+
+@media (max-width: 1100px) {
+  .model-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
 
 @media (max-width: 900px) {
   .hero { grid-template-columns: 1fr; padding-top: 60px; }

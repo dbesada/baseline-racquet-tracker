@@ -14,6 +14,13 @@ test("ships the finished Baseline tracker and its price API", async () => {
   assert.match(page, /BaselineApp/);
   assert.match(ui, /Wait for the/);
   assert.match(route, /Wilson Blade 98/);
+  assert.match(route, /Wilson Blade 98 v8/);
+  assert.match(route, /shortlist_slots/);
+  assert.match(route, /shortlistSlotCount = 6/);
+  assert.match(route, /Head Speed Pro 2026/);
+  assert.match(ui, /YOUR TOP FRAMES/);
+  assert.match(ui, /Top-rated & available/);
+  assert.match(ui, /Six frames/);
   assert.match(route, /collections\/tennis-racquets/);
   assert.match(route, /price_history/);
   assert.match(route, /isGripThree/);
