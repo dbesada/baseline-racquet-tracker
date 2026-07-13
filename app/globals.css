@@ -107,7 +107,10 @@ h2 { margin: 0; font-size: clamp(2rem, 3.5vw, 3.6rem); letter-spacing: -.055em; 
 .model-number { font-family: var(--font-geist-mono), monospace; color: #839088; font-size: .7rem; }
 .deal-pill { border-radius: 50px; background: #e8e9e2; color: #6f7973; padding: 6px 10px; font-size: .64rem; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; }
 .deal-pill.hit { background: var(--lime); color: var(--ink); }
-.model-card h3 { font-size: 1.42rem; margin: 16px 0 22px; letter-spacing: -.035em; }
+.model-identity { min-height: 132px; display: grid; grid-template-columns: minmax(0, 1fr) 96px; gap: 14px; align-items: center; margin: 10px 0 18px; }
+.model-card h3 { font-size: 1.42rem; margin: 0; letter-spacing: -.035em; }
+.model-thumbnail { width: 96px; height: 126px; display: grid; place-items: center; overflow: hidden; border: 1px solid rgba(16,37,29,.09); border-radius: 15px; background: linear-gradient(145deg, rgba(255,255,255,.95), rgba(232,228,216,.58)); }
+.model-thumbnail img { width: 100%; height: 100%; object-fit: contain; padding: 8px; }
 .price-row { display: flex; justify-content: space-between; align-items: end; border-bottom: 1px solid var(--line); padding-bottom: 20px; }
 .price-label { display: block; color: #77827c; font-size: .57rem; font-weight: 800; letter-spacing: .12em; margin-bottom: 5px; }
 .price { font-size: 2.25rem; letter-spacing: -.06em; }
@@ -193,6 +196,8 @@ footer > span { text-align: right; letter-spacing: .12em; }
   .section-heading { align-items: start; gap: 20px; }
   .legend { display: none; }
   .model-card { padding: 22px 18px; }
+  .model-identity { grid-template-columns: minmax(0, 1fr) 88px; min-height: 122px; }
+  .model-thumbnail { width: 88px; height: 116px; }
   .sale-section { margin-top: 58px; padding-top: 44px; }
   .sale-heading { align-items: start; flex-direction: column; gap: 3px; }
   .sale-note { white-space: normal; }

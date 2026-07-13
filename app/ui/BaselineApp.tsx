@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 type Offer = {
@@ -35,6 +36,29 @@ const accents: Record<string, string> = {
   "blade-v8": "mint",
   "ezone-98": "blue",
   "pure-aero-98": "yellow",
+};
+
+const modelImages: Record<string, string> = {
+  "blade-v10": "/racquets/blade-v10.jpg",
+  "blade-v9": "/racquets/blade-v9.png",
+  "blade-v8": "/racquets/blade-v8.png",
+  "ezone-98": "/racquets/ezone-98.jpg",
+  "ezone-100": "/racquets/ezone-100.jpg",
+  "pure-aero-98": "/racquets/pure-aero-98.png",
+  "pure-aero-100": "/racquets/pure-aero-100.png",
+  "clash-100": "/racquets/clash-100.jpg",
+  "vcore-98": "/racquets/vcore-98.jpg",
+  "vcore-100": "/racquets/vcore-100.jpg",
+  "pure-drive-98": "/racquets/pure-drive-98.png",
+  "pure-drive-100": "/racquets/pure-drive-100.webp",
+  "pro-staff-97": "/racquets/pro-staff-97.jpg",
+  "gravity-mp-2025": "/racquets/gravity-mp-2025.webp",
+  "tf40-290": "/racquets/tf40-290.jpg",
+  "cx-400-tour": "/racquets/cx-400-tour.webp",
+  "radical-mp-2025": "/racquets/radical-mp-2025.jpg",
+  "speed-pro-2026": "/racquets/speed-pro-2026.jpg",
+  "rf-01-pro": "/racquets/rf-01-pro.png",
+  "gravity-tour-2025": "/racquets/gravity-tour-2025.jpg",
 };
 
 const money = new Intl.NumberFormat("en-CA", { style: "currency", currency: "CAD", maximumFractionDigits: 2 });
@@ -264,7 +288,12 @@ export function BaselineApp() {
                   <span className="model-number">0{index + 1}</span>
                   <span className={`deal-pill ${belowTarget ? "hit" : ""}`}>{belowTarget ? "Target hit" : "Watching"}</span>
                 </div>
-                <h3>{data?.modelNames[modelKey] ?? modelKey}</h3>
+                <div className="model-identity">
+                  <h3>{data?.modelNames[modelKey] ?? modelKey}</h3>
+                  <div className="model-thumbnail">
+                    <Image src={modelImages[modelKey]} alt={`${data?.modelNames[modelKey] ?? modelKey} racquet`} width={96} height={126} sizes="96px" unoptimized />
+                  </div>
+                </div>
                 <div className="price-row">
                   <div>
                     <span className="price-label">BEST IN-STOCK PRICE</span>
