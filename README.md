@@ -92,6 +92,21 @@ actions tied to the current ChatGPT user. Leave public content anonymous.
 - `npm test`: build the starter and verify its rendered loading skeleton
 - `npm run db:generate`: generate Drizzle migrations after schema changes
 
+## TrueNAS SCALE deployment
+
+The included `Dockerfile` and `docker-compose.yml` run the tracker and its
+hourly monitor with persistent Wrangler/D1 and monitor data. On TrueNAS, copy
+the project into a dataset, open a shell in that directory, and run:
+
+```bash
+docker compose up -d --build
+```
+
+The dashboard is then available on the NAS at port `3000`. From your home Wi-Fi
+open `http://NAS-IP:3000` on your phone. For access away from home, put a
+Cloudflare Tunnel, Tailscale Funnel, or VPN in front of that port; do not expose
+port 3000 directly to the public internet.
+
 ## Learn More
 
 - [vinext Documentation](https://github.com/cloudflare/vinext)

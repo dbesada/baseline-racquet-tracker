@@ -135,7 +135,7 @@ async function readPrevious() {
 const previous = await readPrevious();
 let enabledNames = null;
 try {
-  const settingsResponse = await fetch("http://localhost:3000/api/tracker", { signal: AbortSignal.timeout(3000) });
+  const settingsResponse = await fetch(`${process.env.BASELINE_URL ?? "http://localhost:3000"}/api/tracker`, { signal: AbortSignal.timeout(3000) });
   const settings = await settingsResponse.json();
   enabledNames = new Set((settings.retailers ?? []).filter((retailer) => retailer.enabled).map((retailer) => retailer.name));
 } catch {
