@@ -26,22 +26,30 @@ const feeds = [
 const amazonSearches = ["Wilson Blade 98", "Yonex EZONE 98", "Babolat Pure Aero 98"];
 
 const modelNames = {
-  "blade-v8": "Wilson Blade 98 v8",
+  "blade-v10": "Wilson Blade 98 v10",
   "blade-v9": "Wilson Blade 98 v9",
   "ezone-98": "Yonex EZONE 98",
   "pure-aero-98": "Babolat Pure Aero 98",
+  "clash-100": "Wilson Clash 100",
+  "vcore-98": "Yonex VCORE 98",
+  "pure-drive-98": "Babolat Pure Drive 98",
+  "pro-staff-97": "Wilson Pro Staff 97",
 };
 
-const targets = { "blade-v8": 225, "blade-v9": 275, "ezone-98": 300, "pure-aero-98": 300 };
+const targets = { "blade-v10": 275, "blade-v9": 275, "ezone-98": 300, "pure-aero-98": 300, "clash-100": 250, "vcore-98": 275, "pure-drive-98": 275, "pro-staff-97": 275 };
 const statePath = new URL("../.data/baseline-monitor.json", import.meta.url);
 
 function classify(title) {
   const value = title.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
   if (/\b(demo|used|grommet|junior|jr|98l|98 tour)\b/.test(value)) return null;
-  if (/blade 98/.test(value) && /\bv8\b/.test(value)) return "blade-v8";
+  if (/blade 98/.test(value) && /\bv10\b/.test(value)) return "blade-v10";
   if (/blade 98/.test(value) && /\bv9\b/.test(value)) return "blade-v9";
   if (/ezone 98\b/.test(value)) return "ezone-98";
   if (/pure aero 98\b/.test(value)) return "pure-aero-98";
+  if (/clash 100\b/.test(value)) return "clash-100";
+  if (/vcore 98\b/.test(value)) return "vcore-98";
+  if (/pure drive 98\b/.test(value)) return "pure-drive-98";
+  if (/pro staff 97\b/.test(value)) return "pro-staff-97";
   return null;
 }
 

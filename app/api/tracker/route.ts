@@ -129,18 +129,28 @@ const feeds: Feed[] = [
 const amazonSearches = ["Wilson Blade 98", "Yonex EZONE 98", "Babolat Pure Aero 98"];
 
 const defaultTargets: Record<string, number> = {
-  "blade-v8": 225,
+  "blade-v10": 275,
   "blade-v9": 275,
   "ezone-98": 300,
   "pure-aero-98": 300,
+  "clash-100": 250,
+  "vcore-98": 275,
+  "pure-drive-98": 275,
+  "pro-staff-97": 275,
 };
 
 const modelNames: Record<string, string> = {
-  "blade-v8": "Wilson Blade 98 v8",
+  "blade-v10": "Wilson Blade 98 v10",
   "blade-v9": "Wilson Blade 98 v9",
   "ezone-98": "Yonex EZONE 98",
   "pure-aero-98": "Babolat Pure Aero 98",
+  "clash-100": "Wilson Clash 100",
+  "vcore-98": "Yonex VCORE 98",
+  "pure-drive-98": "Babolat Pure Drive 98",
+  "pro-staff-97": "Wilson Pro Staff 97",
 };
+
+const defaultModelOrder = ["blade-v10", "blade-v9", "ezone-98", "pure-aero-98"];
 
 function db() {
   return env.DB as D1Database;
@@ -171,6 +181,9 @@ async function ensureSchema() {
       retailer_key TEXT PRIMARY KEY, retailer_name TEXT NOT NULL,
       enabled INTEGER NOT NULL DEFAULT 1
     )`),
+    database.prepare(`CREATE TABLE IF NOT EXISTS shortlist_slots (
+      slot INTEGER PRIMARY KEY, model_key TEXT NOT NULL
+    )`),
     database.prepare("CREATE INDEX IF NOT EXISTS price_history_model_idx ON price_history(model_key, checked_at)"),
   ]);
 
@@ -179,6 +192,9 @@ async function ensureSchema() {
       database.prepare("INSERT OR IGNORE INTO targets (model_key, target_price) VALUES (?, ?)").bind(key, value),
     ),
   );
+  await database.batch(defaultModelOrder.map((modelKey, slot) => database.prepare(
+    "INSERT OR IGNORE INTO shortlist_slots (slot, model_key) VALUES (?, ?)",
+  ).bind(slot, modelKey)));
   await database.batch(
     feeds.map((feed) => database.prepare(
       "INSERT OR IGNORE INTO retailer_settings (retailer_key, retailer_name, enabled) VALUES (?, ?, ?)",
@@ -208,10 +224,14 @@ function classify(title: string): string | null {
   const normalized = title.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
   if (/\b(demo|used|grommet|junior|jr)\b/.test(normalized)) return null;
   if (/\b(98l|98 tour)\b/.test(normalized)) return null;
-  if (/blade 98/.test(normalized) && /\bv8\b/.test(normalized)) return "blade-v8";
+  if (/blade 98/.test(normalized) && /\bv10\b/.test(normalized)) return "blade-v10";
   if (/blade 98/.test(normalized) && /\bv9\b/.test(normalized)) return "blade-v9";
   if (/ezone 98\b/.test(normalized)) return "ezone-98";
   if (/pure aero 98\b/.test(normalized)) return "pure-aero-98";
+  if (/clash 100\b/.test(normalized)) return "clash-100";
+  if (/vcore 98\b/.test(normalized)) return "vcore-98";
+  if (/pure drive 98\b/.test(normalized)) return "pure-drive-98";
+  if (/pro staff 97\b/.test(normalized)) return "pro-staff-97";
   return null;
 }
 
@@ -377,7 +397,7 @@ async function runCheck() {
 async function getDashboard() {
   await ensureSchema();
   const database = db();
-  const [offersResult, targetsResult, checksResult, historyResult, retailerSettings] = await Promise.all([
+  const [offersResult, targetsResult, checksResult, historyResult, retailerSettings, shortlistResult] = await Promise.all([
     database.prepare(`SELECT id, model_key AS modelKey, store, title, url,
       current_price AS currentPrice, previous_price AS previousPrice,
       compare_at_price AS compareAtPrice, in_stock AS inStock,
@@ -388,6 +408,7 @@ async function getDashboard() {
     database.prepare(`SELECT model_key AS modelKey, MIN(price) AS price, checked_at AS checkedAt
       FROM price_history GROUP BY model_key, checked_at ORDER BY checked_at DESC LIMIT 60`).all(),
     getRetailerSettings(),
+    database.prepare("SELECT slot, model_key AS modelKey FROM shortlist_slots ORDER BY slot").all(),
   ]);
 
   const offers = ((offersResult as D1Result<Record<string, unknown>>).results ?? []).map((offer) => ({
@@ -400,6 +421,8 @@ async function getDashboard() {
     ((targetsResult as D1Result<{ modelKey: string; targetPrice: number }>).results ?? [])
       .map((row) => [row.modelKey, row.targetPrice]),
   );
+  const shortlist = ((shortlistResult as D1Result<{ slot: number; modelKey: string }>).results ?? [])
+    .sort((a, b) => a.slot - b.slot).map((row) => row.modelKey);
 
   return Response.json({
     offers,
@@ -411,6 +434,8 @@ async function getDashboard() {
     lastCheck: checksResult ?? null,
     history: (historyResult as D1Result).results ?? [],
     modelNames,
+    modelOptions: modelNames,
+    modelOrder: shortlist.length ? shortlist : defaultModelOrder,
     retailers: retailerSettings,
     stores: retailerSettings.filter((retailer) => retailer.enabled && retailer.kind !== "manual").map((retailer) => retailer.name),
   });
@@ -428,13 +453,21 @@ export async function POST(request: Request) {
 
 export async function PATCH(request: Request) {
   await ensureSchema();
-  const body = await request.json() as { modelKey?: string; targetPrice?: number; retailerKey?: string; enabled?: boolean };
+  const body = await request.json() as { modelKey?: string; targetPrice?: number; retailerKey?: string; enabled?: boolean; slot?: number; selectedModelKey?: string };
   if (body.retailerKey) {
     if (!feeds.some((feed) => feed.key === body.retailerKey) || typeof body.enabled !== "boolean") {
       return Response.json({ error: "Invalid retailer setting" }, { status: 400 });
     }
     await db().prepare("UPDATE retailer_settings SET enabled = ? WHERE retailer_key = ?")
       .bind(body.enabled ? 1 : 0, body.retailerKey).run();
+    return getDashboard();
+  }
+  if (Number.isInteger(body.slot) && body.selectedModelKey) {
+    if (body.slot! < 0 || body.slot! > 3 || !(body.selectedModelKey in modelNames)) {
+      return Response.json({ error: "Invalid shortlist frame" }, { status: 400 });
+    }
+    await db().prepare("UPDATE shortlist_slots SET model_key = ? WHERE slot = ?")
+      .bind(body.selectedModelKey, body.slot).run();
     return getDashboard();
   }
   if (!body.modelKey || !(body.modelKey in defaultTargets) || !Number.isFinite(body.targetPrice) || Number(body.targetPrice) < 1) {

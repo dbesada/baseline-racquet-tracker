@@ -53,6 +53,7 @@ main { min-height: 100vh; overflow: hidden; }
 .retailer-toggle small { color: #89938d; font-size: .6rem; }
 .retailer-toggle input { position: absolute; opacity: 0; pointer-events: none; }
 .retailer-toggle i { position: relative; width: 38px; height: 22px; flex: 0 0 auto; border-radius: 20px; background: #c2c9c3; transition: background .2s ease; }
+.retailer-toggle select { max-width: 170px; border: 1px solid var(--line); border-radius: 7px; background: white; color: var(--ink); padding: 7px 8px; font: inherit; font-size: .65rem; }
 .retailer-toggle i::after { content: ""; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: white; box-shadow: 0 1px 4px rgba(0,0,0,.18); transition: transform .2s ease; }
 .retailer-toggle input:checked + i { background: var(--forest); }
 .retailer-toggle input:checked + i::after { transform: translateX(16px); }

@@ -23,13 +23,14 @@ type Dashboard = {
   lastCheck: null | { checkedAt: string; storesChecked: number; offersFound: number; failures: number };
   history: Array<{ modelKey: string; price: number; checkedAt: string }>;
   modelNames: Record<string, string>;
+  modelOptions: Record<string, string>;
+  modelOrder: string[];
   stores: string[];
   retailers: Array<{ key: string; name: string; enabled: boolean; kind: string }>;
 };
 
-const modelOrder = ["blade-v8", "blade-v9", "ezone-98", "pure-aero-98"];
 const accents: Record<string, string> = {
-  "blade-v8": "mint",
+  "blade-v10": "mint",
   "blade-v9": "forest",
   "ezone-98": "blue",
   "pure-aero-98": "yellow",
@@ -132,6 +133,15 @@ export function BaselineApp() {
     if (response.ok) setData(await response.json());
   };
 
+  const replaceFrame = async (slot: number, selectedModelKey: string) => {
+    const response = await fetch("/api/tracker", {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ slot, selectedModelKey }),
+    });
+    if (response.ok) setData(await response.json());
+  };
+
   return (
     <main>
       <header className="topbar">
@@ -155,6 +165,20 @@ export function BaselineApp() {
             <div className="settings-panel-head">
               <div><p className="eyebrow">BASELINE CONTROL ROOM</p><h2 id="settings-title">Settings</h2></div>
               <button className="close-settings" onClick={() => setSettingsOpen(false)} aria-label="Close settings">×</button>
+            </div>
+            <div className="settings-block">
+              <span className="settings-label">YOUR TOP FRAMES</span>
+              <p className="settings-help">Swap any slot for another model. Targets and price history stay attached to the selected model.</p>
+              <div className="retailer-list">
+                {(data?.modelOrder ?? []).map((modelKey, slot) => (
+                  <label className="retailer-toggle" key={`slot-${slot}`}>
+                    <span><strong>Slot {slot + 1}</strong><small>{data?.modelNames[modelKey] ?? modelKey}</small></span>
+                    <select value={modelKey} onChange={(event) => replaceFrame(slot, event.target.value)} aria-label={`Replace frame slot ${slot + 1}`}>
+                      {Object.entries(data?.modelOptions ?? {}).map(([key, name]) => <option value={key} key={key}>{name}</option>)}
+                    </select>
+                  </label>
+                ))}
+              </div>
             </div>
             <div className="settings-block">
               <span className="settings-label">CHECK FREQUENCY</span>
@@ -215,7 +239,7 @@ export function BaselineApp() {
         </div>
 
         <div className="model-grid">
-          {modelOrder.map((modelKey, index) => {
+          {(data?.modelOrder ?? []).map((modelKey, index) => {
             const offers = (data?.offers ?? []).filter((offer) => offer.modelKey === modelKey);
             const inStock = offers.filter((offer) => offer.inStock && offer.currentPrice !== null);
             const best = inStock.sort((a, b) => (a.currentPrice ?? Infinity) - (b.currentPrice ?? Infinity))[0];
@@ -225,7 +249,7 @@ export function BaselineApp() {
             const max = Math.max(...history.map((row) => row.price), 1);
             const min = Math.min(...history.map((row) => row.price), max);
             return (
-              <article className={`model-card ${accents[modelKey]}`} key={modelKey} style={{ "--delay": `${index * 70}ms` } as React.CSSProperties}>
+              <article className={`model-card ${accents[modelKey] ?? "blue"}`} key={modelKey} style={{ "--delay": `${index * 70}ms` } as React.CSSProperties}>
                 <div className="card-top">
                   <span className="model-number">0{index + 1}</span>
                   <span className={`deal-pill ${belowTarget ? "hit" : ""}`}>{belowTarget ? "Target hit" : "Watching"}</span>
