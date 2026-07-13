@@ -16,6 +16,8 @@ test("ships the finished Baseline tracker and its price API", async () => {
   assert.match(route, /Wilson Blade 98/);
   assert.match(route, /collections\/tennis-racquets/);
   assert.match(route, /price_history/);
+  assert.match(route, /isGripThree/);
+  assert.match(route, /saleOffers/);
   assert.match(layout, /og\.png/);
   assert.match(hosting, /"d1": "DB"/);
   assert.doesNotMatch(`${page}${ui}${layout}`, /codex-preview|SkeletonPreview/);

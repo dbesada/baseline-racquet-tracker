@@ -62,6 +62,31 @@ const feeds: Feed[] = [
     origin: "https://courtsideracquets.ca",
     url: "https://courtsideracquets.ca/collections/racquets/products.json?limit=250",
   },
+  {
+    name: "RacquetGuys",
+    origin: "https://racquetguys.ca",
+    url: "https://racquetguys.ca/products.json?limit=250",
+  },
+  {
+    name: "Merchant of Tennis",
+    origin: "https://www.merchantoftennis.com",
+    url: "https://www.merchantoftennis.com/collections/tennis-racquets/products.json?limit=250",
+  },
+  {
+    name: "RaquetteVille",
+    origin: "https://raquetteville.ca",
+    url: "https://raquetteville.ca/collections/tennis-racquets/products.json?limit=250",
+  },
+  {
+    name: "Yumo Pro Shop",
+    origin: "https://yumo.ca",
+    url: "https://yumo.ca/collections/tennis-rackets/products.json?limit=250",
+  },
+  {
+    name: "Prince Canada",
+    origin: "https://princecanada.ca",
+    url: "https://princecanada.ca/collections/racquets/products.json?limit=250",
+  },
 ];
 
 const defaultTargets: Record<string, number> = {
@@ -124,10 +149,20 @@ function classify(title: string): string | null {
   return null;
 }
 
+function isGripThree(value: string) {
+  const normalized = value.toLowerCase();
+  return /(?:^|[\s(])l?3(?:$|[\s(])/.test(normalized) || /4\s*3\/8/.test(normalized);
+}
+
+function isAccessory(title: string) {
+  return /\b(demo|used|grommet|junior|jr|bag|cover|case|string|grip|overgrip|shoe|sock|apparel|hat)\b/i.test(title);
+}
+
 function cleanGrip(value: string) {
   const match = value.match(/(?:4\s*)?(1\/8|1\/4|3\/8|1\/2|5\/8)|\bL([1-5])\b/i);
-  if (!match) return null;
+  if (!match) return isGripThree(value) ? "L3" : null;
   if (match[2]) return `L${match[2]}`;
+  if (isGripThree(value)) return "L3";
   return `4 ${match[1]}`;
 }
 
@@ -145,10 +180,15 @@ async function fetchFeed(feed: Feed): Promise<ParsedOffer[]> {
     if (!response.ok) throw new Error(`${feed.name}: ${response.status}`);
     const payload = (await response.json()) as { products?: ShopifyProduct[] };
     return (payload.products ?? []).flatMap((product) => {
-      const modelKey = classify(product.title);
-      if (!modelKey) return [];
-      const available = product.variants.filter((variant) => variant.available);
+      const modelKey = classify(product.title) ?? "other-sale";
+      if (modelKey === "other-sale" && isAccessory(product.title)) return [];
+      const available = product.variants.filter((variant) => variant.available && isGripThree(`${variant.option1 ?? ""} ${variant.title}`));
       const prices = available.map((variant) => Number(variant.price)).filter(Number.isFinite);
+      const saleVariants = available.filter((variant) => {
+        const compareAt = Number(variant.compare_at_price);
+        return Number.isFinite(compareAt) && compareAt > Number(variant.price);
+      });
+      if (modelKey === "other-sale" && saleVariants.length === 0) return [];
       const comparePrices = available
         .map((variant) => Number(variant.compare_at_price))
         .filter((price) => Number.isFinite(price) && price > 0);
@@ -223,7 +263,7 @@ async function getDashboard() {
       current_price AS currentPrice, previous_price AS previousPrice,
       compare_at_price AS compareAtPrice, in_stock AS inStock,
       grip_sizes AS gripSizes, last_checked AS lastChecked
-      FROM offers ORDER BY model_key, in_stock DESC, current_price ASC`).all(),
+      FROM offers WHERE current_price IS NOT NULL ORDER BY model_key, current_price ASC`).all(),
     database.prepare("SELECT model_key AS modelKey, target_price AS targetPrice FROM targets").all(),
     database.prepare("SELECT checked_at AS checkedAt, stores_checked AS storesChecked, offers_found AS offersFound, failures FROM checks ORDER BY id DESC LIMIT 1").first(),
     database.prepare(`SELECT model_key AS modelKey, MIN(price) AS price, checked_at AS checkedAt
@@ -243,6 +283,10 @@ async function getDashboard() {
 
   return Response.json({
     offers,
+    saleOffers: offers
+      .filter((offer) => offer.modelKey === "other-sale" && offer.currentPrice !== null && offer.compareAtPrice !== null && offer.compareAtPrice > offer.currentPrice)
+      .sort((a, b) => (a.currentPrice ?? Infinity) - (b.currentPrice ?? Infinity))
+      .slice(0, 18),
     targets: targetMap,
     lastCheck: checksResult ?? null,
     history: (historyResult as D1Result).results ?? [],

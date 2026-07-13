@@ -18,6 +18,7 @@ type Offer = {
 
 type Dashboard = {
   offers: Offer[];
+  saleOffers: Offer[];
   targets: Record<string, number>;
   lastCheck: null | { checkedAt: string; storesChecked: number; offersFound: number; failures: number };
   history: Array<{ modelKey: string; price: number; checkedAt: string }>;
@@ -229,6 +230,27 @@ export function BaselineApp() {
               </article>
             );
           })}
+        </div>
+
+        <div className="sale-section">
+          <div className="sale-heading">
+            <div>
+              <p className="eyebrow">THE REST OF THE SALE RACK</p>
+              <h2>Other frames worth a look.</h2>
+            </div>
+            <span className="sale-note">Grip 3 only · new · in stock</span>
+          </div>
+          <div className="sale-grid">
+            {(data?.saleOffers ?? []).map((offer) => (
+              <a className="sale-offer" href={offer.url} target="_blank" rel="noreferrer" key={offer.id}>
+                <span className="sale-store">{offer.store}</span>
+                <strong>{offer.title}</strong>
+                <span className="sale-prices"><b>{money.format(offer.currentPrice ?? 0)}</b><del>{offer.compareAtPrice != null ? money.format(offer.compareAtPrice) : ""}</del><i>↓ {offer.compareAtPrice && offer.currentPrice ? Math.round((1 - offer.currentPrice / offer.compareAtPrice) * 100) : 0}%</i></span>
+                <span className="arrow" aria-hidden="true">↗</span>
+              </a>
+            ))}
+          </div>
+          {!loading && !(data?.saleOffers?.length) && <p className="empty sale-empty">No additional grip-3 sale frames found in this check.</p>}
         </div>
       </section>
 
