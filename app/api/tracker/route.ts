@@ -124,6 +124,15 @@ const feeds: Feed[] = [
   { key: "tennis-central", name: "Tennis Central", origin: "https://www.tenniscentral.ca", url: "https://www.tenniscentral.ca/collections/tennis-racquets", kind: "manual" },
   { key: "tennis-giant", name: "Tennis Giant", origin: "https://www.tennisgiant.com", url: "https://www.tennisgiant.com/collections/tennis-racquets", kind: "manual" },
   { key: "tcc-pro-shop", name: "TCC Pro Shop", origin: "https://proshop.tennisclubs.ca", url: "https://proshop.tennisclubs.ca/collections/tennis-racquets", kind: "manual" },
+  { key: "matchpoint", name: "Matchpoint", origin: "https://matchpointstore.com", url: "https://matchpointstore.com/collections/tennis-racquets", kind: "manual" },
+  { key: "tenniszon", name: "Tenniszon", origin: "https://www.tenniszon.com", url: "https://www.tenniszon.com/collections/tennis-racquets", kind: "manual" },
+  { key: "rackets-runners", name: "Rackets & Runners", origin: "https://racketsandrunners.ca", url: "https://racketsandrunners.ca/collections/tennis-racquets", kind: "manual" },
+  { key: "game-set-match", name: "Game Set Match", origin: "https://gamesetmatch.ca", url: "https://gamesetmatch.ca/collections/tennis-racquets", kind: "manual" },
+  { key: "racquet-vault", name: "Racquet Vault", origin: "https://racquetvault.ca", url: "https://racquetvault.ca/collections/tennis-racquets", kind: "manual" },
+  { key: "courtside-tennis-academy", name: "Courtside Tennis Academy", origin: "https://courtsidetennisacademy.ca", url: "https://courtsidetennisacademy.ca/shop", kind: "manual" },
+  { key: "performance-tennis-ottawa", name: "Performance Tennis Ottawa", origin: "https://www.performancetennis.ca", url: "https://www.performancetennis.ca/shop", kind: "manual" },
+  { key: "plock-tennis", name: "Plock Tennis Club Shop", origin: "https://www.plocktennisclub.ca", url: "https://www.plocktennisclub.ca/category/wilson-racquet", kind: "manual" },
+  { key: "kevin-martin-tennis", name: "Kevin Martin Tennis", origin: "https://www.kevinmartinsport.com", url: "https://www.kevinmartinsport.com/tennis", kind: "manual" },
 ];
 
 const amazonSearches = ["Wilson Blade 98", "Yonex EZONE 98", "Babolat Pure Aero 98"];
