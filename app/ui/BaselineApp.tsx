@@ -21,13 +21,23 @@ type Dashboard = {
   offers: Offer[];
   saleOffers: Offer[];
   targets: Record<string, number>;
+  usedTargets: Record<string, number>;
   lastCheck: null | { checkedAt: string; storesChecked: number; offersFound: number; failures: number };
   history: Array<{ modelKey: string; price: number; checkedAt: string }>;
   modelNames: Record<string, string>;
   modelOptions: Array<{ key: string; name: string; topRated: boolean }>;
   modelOrder: string[];
   stores: string[];
-  retailers: Array<{ key: string; name: string; enabled: boolean; kind: string }>;
+  retailers: Array<{ key: string; name: string; enabled: boolean; kind: string; url: string }>;
+};
+
+type MarketTab = "retail" | "used";
+
+type UsedMarketplace = {
+  key: string;
+  name: string;
+  note: string;
+  buildUrl: (query: string) => string;
 };
 
 const accents: Record<string, string> = {
@@ -63,6 +73,37 @@ const modelImages: Record<string, string> = {
 
 const money = new Intl.NumberFormat("en-CA", { style: "currency", currency: "CAD", maximumFractionDigits: 2 });
 
+function searchSlug(value: string) {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+}
+
+const usedMarketplaces: UsedMarketplace[] = [
+  {
+    key: "kijiji",
+    name: "Kijiji Canada",
+    note: "Local pickup · Canada-wide",
+    buildUrl: (query) => `https://www.kijiji.ca/b-canada/${searchSlug(query)}/k0l0`,
+  },
+  {
+    key: "ebay",
+    name: "eBay Canada",
+    note: "Pre-owned · newest first",
+    buildUrl: (query) => `https://www.ebay.ca/sch/i.html?_nkw=${encodeURIComponent(query)}&LH_ItemCondition=3000&_sop=10`,
+  },
+  {
+    key: "facebook",
+    name: "Facebook Marketplace",
+    note: "Local listings · login may be required",
+    buildUrl: (query) => `https://www.facebook.com/marketplace/category/search/?query=${encodeURIComponent(query)}`,
+  },
+  {
+    key: "sidelineswap",
+    name: "SidelineSwap",
+    note: "Specialty sellers · verify CAD total",
+    buildUrl: (query) => `https://sidelineswap.com/search?q=${encodeURIComponent(query)}`,
+  },
+];
+
 function relativeTime(value?: string) {
   if (!value) return "Not checked yet";
   const minutes = Math.max(0, Math.floor((Date.now() - new Date(value).getTime()) / 60000));
@@ -74,6 +115,7 @@ function relativeTime(value?: string) {
 }
 
 export function BaselineApp() {
+  const [activeMarket, setActiveMarket] = useState<MarketTab>("retail");
   const [data, setData] = useState<Dashboard | null>(null);
   const [loading, setLoading] = useState(true);
   const [checking, setChecking] = useState(false);
@@ -137,13 +179,13 @@ export function BaselineApp() {
     }
   };
 
-  const saveTarget = async (modelKey: string) => {
+  const saveTarget = async (modelKey: string, market: "new" | "used" = "new") => {
     const value = Number(targetDraft);
     if (!Number.isFinite(value) || value <= 0) return;
     const response = await fetch("/api/tracker", {
       method: "PATCH",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ modelKey, targetPrice: value }),
+      body: JSON.stringify({ modelKey, targetPrice: value, market }),
     });
     if (response.ok) setData(await response.json());
     setEditing(null);
@@ -167,20 +209,31 @@ export function BaselineApp() {
     if (response.ok) setData(await response.json());
   };
 
+  const changeMarket = (market: MarketTab) => {
+    setActiveMarket(market);
+    window.requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: "smooth" }));
+  };
+
   return (
     <main>
       <header className="topbar">
-        <a className="brand" href="#top" aria-label="Baseline home">
+        <a className="brand" href={activeMarket === "retail" ? "#top" : "#used-top"} aria-label="Baseline home">
           <span className="brand-mark" aria-hidden="true"><i /><i /><i /></span>
           BASELINE
         </a>
+        <nav className="market-tabs" aria-label="Marketplace view">
+          <button className={activeMarket === "retail" ? "active" : ""} aria-pressed={activeMarket === "retail"} onClick={() => changeMarket("retail")}>New retail</button>
+          <button className={activeMarket === "used" ? "active" : ""} aria-pressed={activeMarket === "used"} onClick={() => changeMarket("used")}>Used market</button>
+        </nav>
         <div className="top-actions">
-          <span className="status-dot"><i /> Watching {data?.stores.length ?? 5} stores</span>
+          <span className="status-dot"><i /> {activeMarket === "retail" ? `Watching ${data?.stores.length ?? 5} stores` : `${usedMarketplaces.length} marketplaces`}</span>
           <button className="settings-button" onClick={() => setSettingsOpen(true)} aria-label="Open tracker settings">Settings</button>
-          <button className={`alert-toggle ${notifications ? "on" : ""}`} onClick={toggleNotifications}>
-            <span aria-hidden="true">{notifications ? "●" : "○"}</span>
-            {notifications ? "Alerts on" : "Turn on alerts"}
-          </button>
+          {activeMarket === "retail" ? (
+            <button className={`alert-toggle ${notifications ? "on" : ""}`} onClick={toggleNotifications}>
+              <span aria-hidden="true">{notifications ? "●" : "○"}</span>
+              {notifications ? "Alerts on" : "Turn on alerts"}
+            </button>
+          ) : <a className="alert-toggle buyer-link" href="#buyer-checklist">Buyer checklist</a>}
         </div>
       </header>
 
@@ -216,15 +269,27 @@ export function BaselineApp() {
             </div>
             <div className="settings-block">
               <span className="settings-label">CHECK FREQUENCY</span>
-              <div className="frequency-card"><strong>Every hour</strong><span>Automatic checks run hourly. You can still check manually anytime.</span></div>
+              <div className="frequency-card"><strong>Every 3 hours</strong><span>Automatic checks run every 3 hours. You can still check manually anytime.</span></div>
             </div>
             <div className="settings-block">
               <span className="settings-label">RETAILERS</span>
-              <p className="settings-help">Disable a store to skip it during checks and remove its listings from the comparison.</p>
+              <p className="settings-help">Automated sources can be disabled. Manual catalogs stay one click away.</p>
               <div className="retailer-list">
-                {(data?.retailers ?? []).map((retailer) => (
+                {(data?.retailers ?? []).map((retailer) => retailer.kind === "manual" ? (
+                  <div className="retailer-toggle manual-retailer" key={retailer.key}>
+                    <span>
+                      <strong>{retailer.name}</strong>
+                      <small>Manual catalog</small>
+                    </span>
+                    <a className="manual-store-link" href={retailer.url} target="_blank" rel="noreferrer">Open store ↗</a>
+                  </div>
+                ) : (
                   <label className="retailer-toggle" key={retailer.key}>
-                    <span><strong>{retailer.name}</strong>{retailer.kind === "amazon" && <small>Best-effort marketplace search</small>}{retailer.kind === "manual" && <small>Manual link · dynamic catalog</small>}</span>
+                    <span>
+                      <strong>{retailer.name}</strong>
+                      {retailer.kind === "amazon" && <small>Best-effort marketplace search</small>}
+                      {retailer.kind === "woocommerce" && <small>Automated catalog feed</small>}
+                    </span>
                     <input type="checkbox" checked={retailer.enabled} onChange={(event) => toggleRetailer(retailer.key, event.target.checked)} />
                     <i aria-hidden="true" />
                   </label>
@@ -236,6 +301,7 @@ export function BaselineApp() {
         </div>
       )}
 
+      {activeMarket === "retail" ? <>
       <section className="hero" id="top">
         <div className="hero-copy">
           <p className="eyebrow">CANADIAN RACQUET PRICE TRACKER</p>
@@ -366,10 +432,106 @@ export function BaselineApp() {
           <div><span>03</span><strong>You save</strong><p>Set your price and jump directly to the retailer.</p></div>
         </div>
       </section>
+      </> : <>
+      <section className="hero used-hero" id="used-top">
+        <div className="hero-copy">
+          <p className="eyebrow">CANADIAN PRE-OWNED RACQUET SEARCH</p>
+          <h1>Find the<br /><em>second bounce.</em></h1>
+          <p className="lede">Search the same six frames across Canada’s strongest used marketplaces. Every link includes the exact model and grip 3 terms, so the hunt starts close to the baseline.</p>
+          <div className="hero-actions">
+            <a className="check-button used-browse-button" href="#used-watchlist"><span aria-hidden="true">⌕</span>Browse used listings</a>
+            <span className="last-check">Search scope<br /><strong>Canada + specialty sellers</strong></span>
+          </div>
+        </div>
+        <div className="court-card used-court-card" aria-label="Used-market search summary">
+          <div className="court-lines"><span /><span /><span /></div>
+          <div className="summary-ball">
+            <strong>{(data?.modelOrder.length ?? 6) * usedMarketplaces.length}</strong>
+            <span>live<br />searches</span>
+          </div>
+          <div className="summary-copy">
+            <span>{data?.modelOrder.length ?? 6} selected frames</span>
+            <strong>{usedMarketplaces.length} marketplaces</strong>
+          </div>
+        </div>
+      </section>
+
+      <section className="watchlist used-watchlist" id="used-watchlist">
+        <div className="section-heading">
+          <div>
+            <p className="eyebrow">YOUR USED-MARKET BOARD</p>
+            <h2>Six frames. Four places to look.</h2>
+          </div>
+          <div className="legend"><span className="used-dot" /> Pre-owned searches <span className="stock-dot" /> Grip 3 terms included</div>
+        </div>
+
+        <div className="model-grid">
+          {(data?.modelOrder ?? []).map((modelKey, index) => {
+            const modelName = data?.modelNames[modelKey] ?? modelKey;
+            const target = data?.usedTargets[modelKey] ?? Math.round((data?.targets[modelKey] ?? 250) * 0.68);
+            const query = `${modelName} tennis racquet 4 3/8 grip 3`;
+            const editingKey = `used:${modelKey}`;
+            return (
+              <article className={`model-card used-model-card ${accents[modelKey] ?? "blue"}`} key={`used-${modelKey}-${index}`} style={{ "--delay": `${index * 70}ms` } as React.CSSProperties}>
+                <div className="card-top">
+                  <span className="model-number">0{index + 1}</span>
+                  <span className="deal-pill used-pill">Pre-owned</span>
+                </div>
+                <div className="model-identity">
+                  <h3>{modelName}</h3>
+                  <div className="model-thumbnail">
+                    <Image src={modelImages[modelKey]} alt={`${modelName} racquet`} width={96} height={126} sizes="96px" unoptimized />
+                  </div>
+                </div>
+                <div className="price-row used-price-row">
+                  <div>
+                    <span className="price-label">AIM TO PAY UNDER</span>
+                    <strong className="price">{money.format(target)}</strong>
+                  </div>
+                  <span className="used-price-note">before shipping<br />and restringing</span>
+                </div>
+                <div className="target-row">
+                  <span>Used-price target</span>
+                  {editing === editingKey ? (
+                    <form onSubmit={(event) => { event.preventDefault(); saveTarget(modelKey, "used"); }}>
+                      <label><span>$</span><input autoFocus inputMode="decimal" value={targetDraft} onChange={(event) => setTargetDraft(event.target.value)} aria-label="Used target price in Canadian dollars" /></label>
+                      <button type="submit">Save</button>
+                    </form>
+                  ) : (
+                    <button className="target-button" onClick={() => { setEditing(editingKey); setTargetDraft(String(target)); }}>
+                      {money.format(target)} <span>edit</span>
+                    </button>
+                  )}
+                </div>
+                <div className="offers used-sources">
+                  {usedMarketplaces.map((marketplace, sourceIndex) => (
+                    <a href={marketplace.buildUrl(query)} target="_blank" rel="noreferrer" className="offer used-source" key={`${modelKey}-${marketplace.key}`}>
+                      <span className="rank">{sourceIndex + 1}</span>
+                      <span className="store"><strong>{marketplace.name}</strong><small>{marketplace.note}</small></span>
+                      <span className="arrow" aria-hidden="true">↗</span>
+                    </a>
+                  ))}
+                </div>
+              </article>
+            );
+          })}
+        </div>
+        <p className="used-disclaimer">Marketplace searches are live, but seller descriptions are inconsistent. Confirm the exact generation, 4⅜ grip, cracks, bumper wear and total delivered price before paying.</p>
+      </section>
+
+      <section className="how-it-works" id="buyer-checklist">
+        <p className="eyebrow">USED-RACQUET CHECKLIST</p>
+        <div className="steps">
+          <div><span>01</span><strong>Inspect the hoop</strong><p>Ask for close photos at 10, 12 and 2 o’clock. Paint chips are normal; structural cracks are not.</p></div>
+          <div><span>02</span><strong>Confirm the setup</strong><p>Verify grip 3, exact generation, unmodified length and whether the frame needs new grommets or strings.</p></div>
+          <div><span>03</span><strong>Protect the payment</strong><p>Use marketplace checkout or meet in public. Include shipping, duties and a restring when comparing the real price.</p></div>
+        </div>
+      </section>
+      </>}
 
       <footer>
-        <a className="brand footer-brand" href="#top"><span className="brand-mark"><i /><i /><i /></span> BASELINE</a>
-        <p>Prices can change between checks. Shipping and tax are confirmed at the retailer.</p>
+        <a className="brand footer-brand" href={activeMarket === "retail" ? "#top" : "#used-top"}><span className="brand-mark"><i /><i /><i /></span> BASELINE</a>
+        <p>{activeMarket === "retail" ? "Prices can change between checks. Shipping and tax are confirmed at the retailer." : "Used listings can change quickly. Inspect the frame and use buyer-protected payment."}</p>
         <span>CAD · CANADA</span>
       </footer>
     </main>

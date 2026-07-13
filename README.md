@@ -95,7 +95,7 @@ actions tied to the current ChatGPT user. Leave public content anonymous.
 ## TrueNAS SCALE deployment
 
 The included `Dockerfile` and `docker-compose.yml` run the tracker and its
-hourly monitor with persistent Wrangler/D1 and monitor data. On TrueNAS, copy
+three-hour monitor with persistent Wrangler/D1 and monitor data. On TrueNAS, copy
 the project into a dataset, open a shell in that directory, and run:
 
 ```bash

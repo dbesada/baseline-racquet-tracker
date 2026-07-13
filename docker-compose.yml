@@ -21,7 +21,7 @@ services:
     environment:
       BASELINE_URL: http://baseline:3000
     entrypoint: ["/bin/sh", "-c"]
-    command: ["while ! wget -q -O- http://baseline:3000/api/tracker >/dev/null 2>&1; do sleep 5; done; while true; do npm run monitor || true; sleep 3600; done"]
+    command: ["while ! wget -q -O- http://baseline:3000/api/tracker >/dev/null 2>&1; do sleep 5; done; while true; do npm run monitor || true; sleep 10800; done"]
 
 volumes:
   baseline-wrangler:
