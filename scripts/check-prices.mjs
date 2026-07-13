@@ -26,7 +26,7 @@ const feeds = [
   ["Tenniszon", "https://www.tenniszon.com", "https://www.tenniszon.com/collections/tennis-racquets", "manual"],
   ["Rackets & Runners", "https://racketsandrunners.ca", "https://racketsandrunners.ca/collections/tennis-racquets", "manual"],
   ["Game Set Match", "https://gamesetmatch.ca", "https://gamesetmatch.ca/collections/tennis-racquets", "manual"],
-  ["Racquet Vault", "https://racquetvault.ca", "https://racquetvault.ca/collections/tennis-racquets", "manual"],
+  ["Racquet Vault", "https://racquetvault.ca", "https://racquetvault.ca/collections/tennis-racquets/products.json?limit=250"],
   ["Courtside Tennis Academy", "https://courtsidetennisacademy.ca", "https://courtsidetennisacademy.ca/shop", "manual"],
   ["Performance Tennis Ottawa", "https://www.performancetennis.ca", "https://www.performancetennis.ca/shop", "manual"],
   ["Plock Tennis Club Shop", "https://www.plocktennisclub.ca", "https://www.plocktennisclub.ca/category/wilson-racquet", "manual"],
