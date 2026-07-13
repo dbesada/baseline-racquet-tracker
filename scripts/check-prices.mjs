@@ -13,6 +13,15 @@ const feeds = [
   ["Prince Canada", "https://princecanada.ca", "https://princecanada.ca/collections/racquets/products.json?limit=250"],
   ["Amazon.ca", "https://www.amazon.ca", "https://www.amazon.ca/s?k=tennis+racket+grip+3+sale", "amazon"],
   ["Amazon.com", "https://www.amazon.com", "https://www.amazon.com/s?k=tennis+racket+grip+3+sale", "amazon"],
+  ["Sport Chek", "https://www.sportchek.ca", "https://www.sportchek.ca/en/cat/sports-tennis/tennis/racquets-DC200002.html", "manual"],
+  ["Sporting Life", "https://www.sportinglife.ca", "https://www.sportinglife.ca/en-CA/tennis/tennis-racquets/", "manual"],
+  ["Altitude Sports", "https://www.altitude-sports.com", "https://www.altitude-sports.com/c/tennis", "manual"],
+  ["Canadian Tire", "https://www.canadiantire.ca", "https://www.canadiantire.ca/en/cat/sports-recreation/tennis/tennis-racquets-DC0002487.html", "manual"],
+  ["Decathlon Canada", "https://www.decathlon.ca", "https://www.decathlon.ca/en/c/tennis/racquets", "manual"],
+  ["Racquets Pro Shop", "https://www.racquetsproshop.ca", "https://www.racquetsproshop.ca/tennis-racquet", "manual"],
+  ["Tennis Central", "https://www.tenniscentral.ca", "https://www.tenniscentral.ca/collections/tennis-racquets", "manual"],
+  ["Tennis Giant", "https://www.tennisgiant.com", "https://www.tennisgiant.com/collections/tennis-racquets", "manual"],
+  ["TCC Pro Shop", "https://proshop.tennisclubs.ca", "https://proshop.tennisclubs.ca/collections/tennis-racquets", "manual"],
 ];
 const amazonSearches = ["Wilson Blade 98", "Yonex EZONE 98", "Babolat Pure Aero 98"];
 
@@ -82,6 +91,7 @@ async function fetchAmazon(store, origin) {
 }
 
 async function fetchStore([store, origin, url, kind]) {
+  if (kind === "manual") return [];
   if (kind === "amazon") return fetchAmazon(store, origin);
   const response = await fetch(url, {
     headers: { accept: "application/json", "user-agent": "BaselinePriceTracker/1.0" },
@@ -123,7 +133,8 @@ try {
 } catch {
   // The standalone monitor can still run when the local UI server is offline.
 }
-const activeFeeds = enabledNames ? feeds.filter(([store]) => enabledNames.has(store)) : feeds;
+const activeFeeds = (enabledNames ? feeds.filter(([store]) => enabledNames.has(store)) : feeds)
+  .filter(([, , , kind]) => kind !== "manual");
 const settled = await Promise.allSettled(activeFeeds.map(fetchStore));
 const offers = settled.flatMap((result) => result.status === "fulfilled" ? result.value : []);
 const current = Object.fromEntries(offers.map((offer) => [offer.id, offer]));

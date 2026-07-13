@@ -23,7 +23,7 @@ type Feed = {
   name: string;
   origin: string;
   url: string;
-  kind?: "shopify" | "amazon";
+  kind?: "shopify" | "amazon" | "manual";
 };
 
 type ParsedOffer = {
@@ -113,6 +113,17 @@ const feeds: Feed[] = [
     url: "https://www.amazon.com/s?k=tennis+racket+grip+3+sale",
     kind: "amazon",
   },
+  // Legitimate Canadian catalogs worth checking manually; their storefronts are
+  // dynamic/anti-bot and do not expose a stable public product feed.
+  { key: "sport-chek", name: "Sport Chek", origin: "https://www.sportchek.ca", url: "https://www.sportchek.ca/en/cat/sports-tennis/tennis/racquets-DC200002.html", kind: "manual" },
+  { key: "sporting-life", name: "Sporting Life", origin: "https://www.sportinglife.ca", url: "https://www.sportinglife.ca/en-CA/tennis/tennis-racquets/", kind: "manual" },
+  { key: "altitude-sports", name: "Altitude Sports", origin: "https://www.altitude-sports.com", url: "https://www.altitude-sports.com/c/tennis", kind: "manual" },
+  { key: "canadian-tire", name: "Canadian Tire", origin: "https://www.canadiantire.ca", url: "https://www.canadiantire.ca/en/cat/sports-recreation/tennis/tennis-racquets-DC0002487.html", kind: "manual" },
+  { key: "decathlon-canada", name: "Decathlon Canada", origin: "https://www.decathlon.ca", url: "https://www.decathlon.ca/en/c/tennis/racquets", kind: "manual" },
+  { key: "racquets-pro-shop", name: "Racquets Pro Shop", origin: "https://www.racquetsproshop.ca", url: "https://www.racquetsproshop.ca/tennis-racquet", kind: "manual" },
+  { key: "tennis-central", name: "Tennis Central", origin: "https://www.tenniscentral.ca", url: "https://www.tenniscentral.ca/collections/tennis-racquets", kind: "manual" },
+  { key: "tennis-giant", name: "Tennis Giant", origin: "https://www.tennisgiant.com", url: "https://www.tennisgiant.com/collections/tennis-racquets", kind: "manual" },
+  { key: "tcc-pro-shop", name: "TCC Pro Shop", origin: "https://proshop.tennisclubs.ca", url: "https://proshop.tennisclubs.ca/collections/tennis-racquets", kind: "manual" },
 ];
 
 const amazonSearches = ["Wilson Blade 98", "Yonex EZONE 98", "Babolat Pure Aero 98"];
@@ -170,8 +181,8 @@ async function ensureSchema() {
   );
   await database.batch(
     feeds.map((feed) => database.prepare(
-      "INSERT OR IGNORE INTO retailer_settings (retailer_key, retailer_name, enabled) VALUES (?, ?, 1)",
-    ).bind(feed.key, feed.name)),
+      "INSERT OR IGNORE INTO retailer_settings (retailer_key, retailer_name, enabled) VALUES (?, ?, ?)",
+    ).bind(feed.key, feed.name, feed.kind === "manual" ? 0 : 1)),
   );
 }
 
@@ -190,7 +201,7 @@ async function getRetailerSettings() {
 async function getEnabledFeeds() {
   const settings = await getRetailerSettings();
   const enabled = new Set(settings.filter((setting) => setting.enabled).map((setting) => setting.key));
-  return feeds.filter((feed) => enabled.has(feed.key));
+  return feeds.filter((feed) => enabled.has(feed.key) && feed.kind !== "manual");
 }
 
 function classify(title: string): string | null {
@@ -401,7 +412,7 @@ async function getDashboard() {
     history: (historyResult as D1Result).results ?? [],
     modelNames,
     retailers: retailerSettings,
-    stores: retailerSettings.filter((retailer) => retailer.enabled).map((retailer) => retailer.name),
+    stores: retailerSettings.filter((retailer) => retailer.enabled && retailer.kind !== "manual").map((retailer) => retailer.name),
   });
 }
 

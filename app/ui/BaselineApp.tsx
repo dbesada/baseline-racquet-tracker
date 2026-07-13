@@ -166,7 +166,7 @@ export function BaselineApp() {
               <div className="retailer-list">
                 {(data?.retailers ?? []).map((retailer) => (
                   <label className="retailer-toggle" key={retailer.key}>
-                    <span><strong>{retailer.name}</strong>{retailer.kind === "amazon" && <small>Best-effort marketplace search</small>}</span>
+                    <span><strong>{retailer.name}</strong>{retailer.kind === "amazon" && <small>Best-effort marketplace search</small>}{retailer.kind === "manual" && <small>Manual link · dynamic catalog</small>}</span>
                     <input type="checkbox" checked={retailer.enabled} onChange={(event) => toggleRetailer(retailer.key, event.target.checked)} />
                     <i aria-hidden="true" />
                   </label>
