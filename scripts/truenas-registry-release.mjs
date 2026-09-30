@@ -2,7 +2,16 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+// TrueNAS ships a self-signed certificate. Trust it explicitly by starting Node
+// with NODE_EXTRA_CA_CERTS pointing at that certificate file, instead of turning
+// verification off. As a temporary escape hatch on a trusted LAN, set
+// BASELINE_ALLOW_INSECURE_TLS=1 to restore the old behaviour for one run.
+if (process.env.BASELINE_ALLOW_INSECURE_TLS === "1") {
+  console.warn("TLS certificate verification is DISABLED for this run (BASELINE_ALLOW_INSECURE_TLS=1).");
+  process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+}
+const truenasHost = process.env.TRUENAS_HOST ?? "192.168.50.230";
+const truenasApiKeyFile = process.env.TRUENAS_API_KEY_FILE ?? "C:/AI/.codex/truenas-api-key.txt";
 
 const version = process.argv[2]?.trim();
 if (!/^\d+\.\d+\.\d+$/.test(version ?? "")) throw new Error("Pass a semantic version, for example 0.1.6");
@@ -11,7 +20,7 @@ const localArchive = process.argv[3];
 if (!deployOnly && (!localArchive || !fs.existsSync(localArchive))) throw new Error("The release source archive was not provided");
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const apiKey = fs.readFileSync("C:/AI/.codex/truenas-api-key.txt", "utf8").trim();
+const apiKey = fs.readFileSync(truenasApiKeyFile, "utf8").trim();
 const registryUri = "https://index.docker.io/v1";
 const registryHost = "docker.io";
 const image = `dbesada/baseline-racquet-tracker:${version}`;
@@ -26,7 +35,7 @@ const persistentSettingsPath = "/mnt/pool0/apps/baseline/direct-data/baseline-se
 
 let nextId = 1;
 const pending = new Map();
-const socket = new WebSocket("wss://192.168.50.230/api/current");
+const socket = new WebSocket(`wss://${truenasHost}/api/current`);
 
 socket.addEventListener("message", (event) => {
   const message = JSON.parse(event.data);
@@ -80,7 +89,7 @@ async function ensureRegistry() {
 
 async function backupLiveSettings() {
   try {
-    const response = await fetch("http://192.168.50.230:4600/api/tracker", { signal: AbortSignal.timeout(20_000) });
+    const response = await fetch(`http://${truenasHost}:4600/api/tracker`, { signal: AbortSignal.timeout(20_000) });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const dashboard = await response.json();
     const settings = {
@@ -96,7 +105,7 @@ async function backupLiveSettings() {
     const upload = new FormData();
     upload.set("data", JSON.stringify({ method: "filesystem.put", params: [persistentSettingsPath] }));
     upload.set("file", new Blob([JSON.stringify(settings, null, 2)]), "baseline-settings.json");
-    const uploadResponse = await fetch("https://192.168.50.230/_upload/", {
+    const uploadResponse = await fetch(`https://${truenasHost}/_upload/`, {
       method: "POST",
       headers: { Authorization: `Bearer ${apiKey}` },
       body: upload,
@@ -160,7 +169,7 @@ async function main() {
     upload.set("data", JSON.stringify({ method: "filesystem.put", params: [remoteArchive] }));
     upload.set("file", new Blob([fs.readFileSync(localArchive)]), path.basename(localArchive));
     try {
-      const uploadResponse = await fetch("https://192.168.50.230/_upload/", {
+      const uploadResponse = await fetch(`https://${truenasHost}/_upload/`, {
         method: "POST",
         headers: { Authorization: `Bearer ${apiKey}` },
         body: upload,
@@ -200,7 +209,7 @@ async function main() {
       // legitimately redirect through Cloudflare Access or depend on the
       // current Tailscale client, which caused healthy releases to be marked
       // as failed after deployment had already completed.
-      const response = await fetch("http://192.168.50.230:4600/", { signal: AbortSignal.timeout(10_000) });
+      const response = await fetch(`http://${truenasHost}:4600/`, { signal: AbortSignal.timeout(10_000) });
       if (response.ok) { healthy = true; break; }
     } catch {}
     await new Promise((resolve) => setTimeout(resolve, 3000));

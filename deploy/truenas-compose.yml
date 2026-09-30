@@ -7,7 +7,15 @@ services:
     volumes:
       - /mnt/pool0/apps/baseline/direct-data:/app/.data
       - /mnt/pool0/apps/baseline/direct-wrangler:/app/.wrangler
-    command: ["npm", "run", "start", "--", "--port", "4601"]
+    # Listens on loopback only. Everything reaches it through baseline_relay,
+    # which decides who is an admin and who is public.
+    command: ["npm", "run", "start:loopback", "--", "--port", "4601"]
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:4601/"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 90s
 
   baseline_relay:
     image: __IMAGE__
@@ -18,17 +26,31 @@ services:
       - baseline_ui
     entrypoint: ["/bin/sh", "-c"]
     environment:
-      BASELINE_UPSTREAM_HOST: "localhost"
+      BASELINE_UPSTREAM_HOST: "127.0.0.1"
       BASELINE_UPSTREAM_PORT: "4601"
       BASELINE_RELAY_PORT: "4600"
       BASELINE_CALLBACK_PORT: "4602"
+      # Cloudflare Access verification. Fill both in from the Access application
+      # in the Cloudflare Zero Trust dashboard (team domain such as
+      # "myteam.cloudflareaccess.com", and the application's Audience tag).
+      # While either is empty, admin actions work only from the local network.
+      CF_ACCESS_TEAM_DOMAIN: ""
+      CF_ACCESS_AUD: ""
     volumes:
       - /mnt/pool0/apps/baseline/direct-data:/app/.data
     command: ["sleep 8; exec node /app/scripts/baseline-relay.mjs"]
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:4600/"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
 
   baseline_tunnel:
+    # Pin an exact version here once you have chosen one. "missing" stops a
+    # restart from silently pulling a new release.
     image: cloudflare/cloudflared:latest
-    pull_policy: always
+    pull_policy: missing
     network_mode: host
     restart: unless-stopped
     depends_on:

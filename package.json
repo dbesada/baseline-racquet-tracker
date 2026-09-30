@@ -9,6 +9,7 @@
     "dev": "vinext dev",
     "build": "vinext build",
     "start": "wrangler dev --config dist/server/wrangler.json --ip 0.0.0.0",
+    "start:loopback": "wrangler dev --config dist/server/wrangler.json --ip 127.0.0.1",
     "test": "npm run build && node --test",
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next",
     "db:generate": "drizzle-kit generate",
