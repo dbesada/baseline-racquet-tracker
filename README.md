@@ -94,18 +94,22 @@ actions tied to the current ChatGPT user. Leave public content anonymous.
 
 ## TrueNAS SCALE deployment
 
-The included `Dockerfile` and `docker-compose.yml` run the tracker and its
-three-hour monitor with persistent Wrangler/D1 and monitor data. On TrueNAS, copy
-the project into a dataset, open a shell in that directory, and run:
+Production releases use versioned images in Docker Hub. The TrueNAS custom app
+pulls `dbesada/baseline-racquet-tracker:<version>` and keeps its settings, price
+history, and credentials in persistent host datasets.
 
-```bash
-docker compose up -d --build
+To test, build, publish the version in `VERSION`, update the TrueNAS app, and run
+the public health check:
+
+```powershell
+npm run release:truenas
 ```
 
-The dashboard is then available on the NAS at port `3000`. From your home Wi-Fi
-open `http://NAS-IP:3000` on your phone. For access away from home, put a
-Cloudflare Tunnel, Tailscale Funnel, or VPN in front of that port; do not expose
-port 3000 directly to the public internet.
+The command reads registry and TrueNAS credentials from their existing local
+credential stores; secrets are not written into this repository. The deployed
+Compose definition is in `deploy/truenas-compose.yml`. The dashboard is exposed
+through the existing Tailscale route at
+`https://nasbesada.tail0731b8.ts.net/`.
 
 ## Learn More
 

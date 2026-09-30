@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Baseline Racquet Deals</string>
+    <string name="title_activity_main">Baseline Racquet Deals</string>
+    <string name="package_name">ca.baseline.racquetdeals</string>
+    <string name="custom_url_scheme">ca.baseline.racquetdeals</string>
+</resources>

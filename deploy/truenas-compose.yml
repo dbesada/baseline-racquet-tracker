@@ -1,0 +1,55 @@
+services:
+  baseline_ui:
+    image: __IMAGE__
+    pull_policy: always
+    network_mode: host
+    restart: unless-stopped
+    volumes:
+      - /mnt/pool0/apps/baseline/direct-data:/app/.data
+      - /mnt/pool0/apps/baseline/direct-wrangler:/app/.wrangler
+    command: ["npm", "run", "start", "--", "--port", "4601"]
+
+  baseline_relay:
+    image: __IMAGE__
+    pull_policy: always
+    network_mode: host
+    restart: unless-stopped
+    depends_on:
+      - baseline_ui
+    entrypoint: ["/bin/sh", "-c"]
+    environment:
+      BASELINE_UPSTREAM_HOST: "localhost"
+      BASELINE_UPSTREAM_PORT: "4601"
+      BASELINE_RELAY_PORT: "4600"
+      BASELINE_CALLBACK_PORT: "4602"
+    volumes:
+      - /mnt/pool0/apps/baseline/direct-data:/app/.data
+    command: ["sleep 8; exec node /app/scripts/baseline-relay.mjs"]
+
+  baseline_tunnel:
+    image: cloudflare/cloudflared:latest
+    pull_policy: always
+    network_mode: host
+    restart: unless-stopped
+    depends_on:
+      - baseline_relay
+    volumes:
+      - /mnt/pool0/apps/baseline/direct-data/cloudflare-tunnel-token:/run/secrets/cloudflare-tunnel-token:ro
+    command: ["tunnel", "--no-autoupdate", "run", "--token-file", "/run/secrets/cloudflare-tunnel-token"]
+
+  tailscale_routes:
+    image: docker:27-cli
+    network_mode: host
+    restart: unless-stopped
+    entrypoint: ["/bin/sh", "-c"]
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /mnt/pool0/apps/baseline:/mnt/pool0/apps/baseline
+    command:
+      - >-
+        until wget -q -O /dev/null http://127.0.0.1:4600/; do sleep 2; done;
+        docker exec ix-tailscale-tailscale-1 tailscale funnel --https=443 off >/dev/null 2>&1 || true;
+        docker exec ix-tailscale-tailscale-1 tailscale serve --https=8443 off >/dev/null 2>&1 || true;
+        docker exec ix-tailscale-tailscale-1 tailscale serve --bg --https=443 http://127.0.0.1:4600 >/mnt/pool0/apps/baseline/direct-data/tailscale-route.log 2>&1;
+        docker exec ix-tailscale-tailscale-1 tailscale funnel --bg --https=8443 http://127.0.0.1:4602 >>/mnt/pool0/apps/baseline/direct-data/tailscale-route.log 2>&1;
+        sleep infinity

@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="Baseline tennis price tracker">
+  <rect width="128" height="128" rx="28" fill="#123f32"/>
+  <circle cx="64" cy="64" r="42" fill="#dbe61f"/>
+  <path d="M39 29c17 13 23 35 13 55-5 11-14 20-25 25M89 99C72 86 66 64 76 44c5-11 14-20 25-25" fill="none" stroke="#f7f1d6" stroke-width="7" stroke-linecap="round"/>
+</svg>

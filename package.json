@@ -1,6 +1,6 @@
 {
   "name": "baseline-racquet-deal-tracker",
-  "version": "0.1.0",
+  "version": "0.1.75",
   "private": true,
   "engines": {
     "node": ">=22.13.0"
@@ -8,11 +8,12 @@
   "scripts": {
     "dev": "vinext dev",
     "build": "vinext build",
-    "start": "vinext start",
-    "test": "npm run build && node --test tests/rendered-html.test.mjs",
+    "start": "wrangler dev --config dist/server/wrangler.json --ip 0.0.0.0",
+    "test": "npm run build && node --test",
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next",
     "db:generate": "drizzle-kit generate",
-    "monitor": "node scripts/check-prices.mjs"
+    "monitor": "node scripts/check-prices.mjs",
+    "release:truenas": "powershell -ExecutionPolicy Bypass -File scripts/release-truenas.ps1"
   },
   "dependencies": {
     "drizzle-orm": "0.45.2",

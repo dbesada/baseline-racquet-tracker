@@ -44,9 +44,14 @@ export default defineConfig(async () => {
   const { cloudflare } = await import("@cloudflare/vite-plugin");
 
   return {
-    server: isCodexSeatbeltSandbox
-      ? { watch: { useFsEvents: false, usePolling: true } }
-      : undefined,
+    server: {
+      host: "0.0.0.0",
+      // TrueNAS is accessed through Tailscale Serve. Vite validates the Host
+      // header, so explicitly allow the stable tailnet hostname as well as
+      // local/LAN access.
+      allowedHosts: ["nasbesada.tail0731b8.ts.net", "192.168.50.230", "localhost"],
+      watch: { useFsEvents: false, usePolling: true },
+    },
     plugins: [
       vinext(),
       sites(),

@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 320" role="img" aria-labelledby="title desc">
+  <title id="title">Racquet photo pending verification</title>
+  <desc id="desc">A simple neutral tennis racquet illustration.</desc>
+  <rect width="240" height="320" rx="28" fill="#f2f0e8"/>
+  <ellipse cx="120" cy="116" rx="57" ry="76" fill="none" stroke="#78918a" stroke-width="7"/>
+  <path d="M72 73h96M65 98h110M63 123h114M66 148h108M72 173h96M86 48v139M108 39v153M132 39v153M154 48v139" stroke="#b6c4bd" stroke-width="2"/>
+  <path d="M120 192v64" stroke="#78918a" stroke-width="9" stroke-linecap="round"/>
+  <path d="M113 252h14l9 42h-32z" fill="#526c65"/>
+  <text x="120" y="302" text-anchor="middle" font-family="Arial, sans-serif" font-size="13" font-weight="700" fill="#496058">PHOTO VERIFYING</text>
+</svg>

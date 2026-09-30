@@ -2,6 +2,7 @@
 
 # dependencies
 /node_modules
+**/node_modules/
 /.pnp
 .pnp.*
 .yarn/*
@@ -41,3 +42,16 @@ next-env.d.ts
 /outputs/
 /work/
 /.data/
+/.playwright-cli/
+/output/
+/public/racquets/optimized/
+
+# native mobile build output and local signing material
+/android-wrapper/android/.gradle/
+/android-wrapper/android/**/build/
+/android-wrapper/android/local.properties
+/android-wrapper/android/keystore.properties
+/android-wrapper/android/*.jks
+/android-wrapper/android/*.keystore
+/android-wrapper/ios/App/Pods/
+/android-wrapper/ios/App/DerivedData/
