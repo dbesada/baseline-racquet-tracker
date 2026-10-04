@@ -54,3 +54,8 @@ test("the registry password is passed in a private file, never in the app config
     "the password file must be uploaded before the builder app starts",
   );
 });
+
+test("the relay reads the Tailscale admin allowlist from the deployment", () => {
+  assert.match(read("scripts/baseline-relay.mjs"), /BASELINE_TAILSCALE_ADMINS/);
+  assert.match(read("deploy/truenas-compose.yml"), /BASELINE_TAILSCALE_ADMINS:/);
+});

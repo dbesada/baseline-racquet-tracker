@@ -5,6 +5,7 @@ import {
   createAccessVerifier,
   isAdminRequest,
   isPrivateOrLoopbackAddress,
+  parseLoginList,
 } from "../scripts/access-control.mjs";
 
 const TEAM = "example-team.cloudflareaccess.com";
@@ -132,4 +133,26 @@ test("the public preview marker and public hostnames always win", async () => {
   const lan = { remoteAddress: "192.168.50.20", verifier: null };
   assert.equal(await isAdminRequest({ ...lan, headers: { host: "192.168.50.230", "x-baseline-public-preview": "true" } }), false);
   assert.equal(await isAdminRequest({ ...lan, headers: { host: "192.168.50.230", "x-forwarded-host": "baseline-beta.besada.net" } }), false);
+});
+
+test("Tailscale Serve admin needs an allowlisted login from the local proxy", async () => {
+  const base = { verifier: null, tailscaleAdmins: ["owner@example.com"] };
+  const viaServe = (login, extra = {}) => ({
+    host: "nas.tail1234.ts.net",
+    "tailscale-user-login": login,
+    "x-forwarded-for": "100.64.0.7",
+    ...extra,
+  });
+  assert.equal(await isAdminRequest({ ...base, headers: viaServe("owner@example.com"), remoteAddress: "127.0.0.1" }), true);
+  assert.equal(await isAdminRequest({ ...base, headers: viaServe("Owner@Example.com"), remoteAddress: "::ffff:127.0.0.1" }), true, "login is case-insensitive");
+  assert.equal(await isAdminRequest({ ...base, headers: viaServe("guest@example.com"), remoteAddress: "127.0.0.1" }), false, "not on the allowlist");
+  assert.equal(await isAdminRequest({ ...base, headers: viaServe("owner@example.com"), remoteAddress: "192.168.50.20" }), false, "header sent straight from the LAN");
+  assert.equal(await isAdminRequest({ ...base, tailscaleAdmins: [], headers: viaServe("owner@example.com"), remoteAddress: "127.0.0.1" }), false, "no allowlist configured");
+  assert.equal(await isAdminRequest({ ...base, headers: viaServe("owner@example.com", { "cf-ray": "abc" }), remoteAddress: "127.0.0.1" }), false, "Cloudflare traffic still needs its token");
+  assert.equal(await isAdminRequest({ ...base, headers: { host: "nas.tail1234.ts.net", "x-forwarded-for": "203.0.113.9" }, remoteAddress: "127.0.0.1" }), false, "Funnel traffic carries no login");
+});
+
+test("parses the Tailscale admin list", () => {
+  assert.deepEqual(parseLoginList(" Owner@Example.com, ,second@example.com "), ["owner@example.com", "second@example.com"]);
+  assert.deepEqual(parseLoginList(undefined), []);
 });
