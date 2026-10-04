@@ -3,10 +3,16 @@ import { access, readFile } from "node:fs/promises";
 import test from "node:test";
 import { defaultTargets, modelNames } from "../app/lib/racquet-catalogue.js";
 
+// The main UI is split across the component and its data/helper modules.
+const uiFiles = ["BaselineApp.tsx", "baseline-catalogue.ts", "baseline-types.ts"];
+const readUiSource = async () => (await Promise.all(
+  uiFiles.map((file) => readFile(new URL(`../app/ui/${file}`, import.meta.url), "utf8")),
+)).join("\n");
+
 test("ships the finished Baseline tracker and its price API", async () => {
   const [page, ui, coach, styles, route, layout, hosting, monitor, relay, release] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
-    readFile(new URL("../app/ui/BaselineApp.tsx", import.meta.url), "utf8"),
+    readUiSource(),
     readFile(new URL("../app/ui/BaselineCoach.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
     readFile(new URL("../app/api/tracker/route.ts", import.meta.url), "utf8"),
@@ -290,7 +296,7 @@ test("ships the finished Baseline tracker and its price API", async () => {
 
 test("ships an installable mobile experience with guarded native releases", async () => {
   const [ui, layout, manifest, serviceWorker, privacy, capacitor, androidBuild, androidManifest, mobilePackage] = await Promise.all([
-    readFile(new URL("../app/ui/BaselineApp.tsx", import.meta.url), "utf8"),
+    readUiSource(),
     readFile(new URL("../app/layout.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/manifest.ts", import.meta.url), "utf8"),
     readFile(new URL("../public/sw.js", import.meta.url), "utf8"),
@@ -327,7 +333,7 @@ test("ships an installable mobile experience with guarded native releases", asyn
 
 test("recognizes the expanded current and legacy racquet catalogue", async () => {
   const [ui, route, monitor] = await Promise.all([
-    readFile(new URL("../app/ui/BaselineApp.tsx", import.meta.url), "utf8"),
+    readUiSource(),
     readFile(new URL("../app/api/tracker/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../scripts/check-prices.mjs", import.meta.url), "utf8"),
   ]);
