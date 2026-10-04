@@ -331,10 +331,7 @@ test("recognizes the expanded current and legacy racquet catalogue", async () =>
     readFile(new URL("../scripts/check-prices.mjs", import.meta.url), "utf8"),
   ]);
 
-  const classifierStart = monitor.indexOf("const manufacturerModelCodes");
-  const classifierEnd = monitor.indexOf("\nfunction classifyUsed", classifierStart);
-  assert.ok(classifierStart >= 0 && classifierEnd > classifierStart);
-  const classify = Function(`${monitor.slice(classifierStart, classifierEnd)}; return classify;`)();
+  const { classify } = await import("../app/lib/catalog-matching.js");
 
   const examples = new Map([
     ["Wilson Defyer 98 Pro V1 Tennis Racquet (2026)", "defyer-98-pro-v1"],
