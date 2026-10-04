@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { access, readFile } from "node:fs/promises";
 import test from "node:test";
+import { defaultTargets, modelNames } from "../app/lib/racquet-catalogue.js";
 
 test("ships the finished Baseline tracker and its price API", async () => {
   const [page, ui, coach, styles, route, layout, hosting, monitor, relay, release] = await Promise.all([
@@ -19,10 +20,10 @@ test("ships the finished Baseline tracker and its price API", async () => {
   assert.match(page, /BaselineApp/);
   assert.match(ui, /Wait for the/);
   assert.match(route, /Wilson Blade 98/);
-  assert.match(route, /Wilson Blade 98 16x19 v8/);
+  assert.ok(Object.values(modelNames).includes("Wilson Blade 98 16x19 v8"));
   assert.match(route, /shortlist_slots/);
   assert.match(route, /shortlistSlotCount = 6/);
-  assert.match(route, /Head Speed Pro 2026/);
+  assert.ok(Object.values(modelNames).includes("Head Speed Pro 2026"));
   assert.match(ui, /YOUR TOP FRAMES/);
   assert.match(ui, /Top-rated & available/);
   assert.match(ui, /Six frames/);
@@ -484,27 +485,17 @@ test("recognizes the expanded current and legacy racquet catalogue", async () =>
 
   for (const [title, modelKey] of examples) {
     assert.equal(classify(title), modelKey, title);
-    assert.match(route, new RegExp(`"${modelKey.replaceAll("-", "\\-")}"`));
+    assert.ok(Object.hasOwn(modelNames, modelKey), `${modelKey} is in the shared catalogue`);
     assert.match(ui, new RegExp(`"${modelKey.replaceAll("-", "\\-")}"`));
   }
 
   assert.match(monitor, /Concept Edition/);
   assert.match(ui, /Concept Edition/);
 
-  const objectKeys = (source, declaration) => {
-    const start = source.indexOf(declaration);
-    assert.ok(start >= 0, declaration);
-    const end = source.indexOf("\n};", start);
-    assert.ok(end > start, declaration);
-    return [...source.slice(start, end).matchAll(/"([^"]+)":/g)].map((match) => match[1]).sort();
-  };
-  const routeNames = objectKeys(route, "const modelNames:");
-  const monitorNames = objectKeys(monitor, "const modelNames =");
-  const routeTargets = objectKeys(route, "const defaultTargets:");
-  const monitorTargets = objectKeys(monitor, "const targets =");
-  assert.equal(routeNames.length, 201);
-  assert.deepEqual(routeNames, monitorNames);
-  assert.deepEqual(routeTargets, monitorTargets);
+  // Both the API and the monitor import this one catalogue, and every model has a target.
+  assert.equal(Object.keys(modelNames).length, 201);
+  assert.deepEqual(Object.keys(defaultTargets).sort(), Object.keys(modelNames).sort());
+  for (const source of [route, monitor]) assert.match(source, /lib\/racquet-catalogue\.js"/);
   for (const field of ["strungWeight", "strungBalance", "swingweight", "composition", "tension", "productCode"]) {
     assert.match(ui, new RegExp(field));
     assert.match(monitor, new RegExp(field));
