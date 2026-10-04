@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { BaselineCoach, type CoachModel, type CoachString } from "./BaselineCoach";
 import type { Offer, StringOffer, AccessoryOffer, BallOffer, Dashboard, MarketTab, GripSize, BrandKey, BrandViewKey, HeadSizeFilter, WeightFilter, PatternFilter, CatalogueSort, CatalogueMetric, StringTypeFilter, StringFormatFilter, AccessoryCategoryFilter, AccessorySort, BallTypeFilter, BallSort, AnalyticsSummary, UsedSort, UsedAvailability, OpportunityMode, SpecialGripFilter, SpecialAvailabilityFilter, SpecialSort, RacquetSpec, InstallPromptEvent, SpecialEditionGroup, StringGroup, AccessoryGroup, BallGroup } from "./baseline-types";
 import {
@@ -1949,7 +1949,7 @@ export function BaselineApp() {
             </div>
             <p className="compare-note">Official manufacturer specifications are the primary record and are independently checked against matching Canadian retailer listings. Measurements use one consistent format; secondary units are shown for convenience. Strung measurements and RA can vary by setup, sample, and generation.</p>
             <div className="comparison-scroll">
-              <table className="comparison-table" style={{ minWidth: `${210 + compareKeys.length * 180}px` }}>
+              <table className="comparison-table" style={{ "--compare-columns": compareKeys.length } as CSSProperties}>
                 <thead>
                   <tr><th>Specification</th>{compareKeys.map((key) => <th key={key}>{racquetImage(key, "comparison-frame-thumb", 82, 108, `${data?.modelNames[key] ?? key} racquet`)}<strong>{data?.modelNames[key] ?? key}</strong><span>{modelBrand(key)}</span>{refreshingModels.has(key) && <small className="model-refresh-state"><i />Refreshing…</small>}</th>)}</tr>
                 </thead>
