@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import { spawn } from "node:child_process";
 import { appendFile, readFile, rename, writeFile } from "node:fs/promises";
 import { gzipSync } from "node:zlib";
+import { createAccessVerifier, isAdminRequest } from "./access-control.mjs";
 
 const upstream = `http://${process.env.BASELINE_UPSTREAM_HOST ?? "127.0.0.1"}:${process.env.BASELINE_UPSTREAM_PORT ?? "4001"}`;
 const upstreamUrl = new URL(upstream);
@@ -12,6 +13,19 @@ const analyticsFile = "/app/.data/baseline-analytics.json";
 const ebayDeletionTokenFile = process.env.EBAY_DELETION_TOKEN_FILE ?? "/app/.data/ebay-deletion-token";
 const ebayDeletionEndpoint = process.env.EBAY_DELETION_ENDPOINT
   ?? "https://nasbesada.tail0731b8.ts.net:8443/api/ebay/account-deletion";
+// Cloudflare Access verification. Both values come from the Access application
+// in the Cloudflare Zero Trust dashboard: the team domain (for example
+// "myteam.cloudflareaccess.com") and the application's Audience (AUD) tag.
+// Without them, requests arriving through Cloudflare are always public; direct
+// LAN administration keeps working.
+const accessVerifier = createAccessVerifier({
+  teamDomain: process.env.CF_ACCESS_TEAM_DOMAIN,
+  audience: process.env.CF_ACCESS_AUD,
+});
+if (!accessVerifier) {
+  console.warn("CF_ACCESS_TEAM_DOMAIN / CF_ACCESS_AUD not set: admin actions are limited to the local network.");
+}
+const publicPreviewByRequest = new WeakMap();
 const checkEveryMs = 3 * 60 * 60 * 1000;
 let activeCheck = null;
 let dashboardCache = null;
@@ -374,17 +388,22 @@ async function dashboardWithLivePrices() {
   return applyPersistentSettings(dashboard, settings);
 }
 
+// The decision is made once per request, before routing (see the server
+// callback below), and read back here. A request that was never classified is
+// treated as public.
+async function classifyRequest(req) {
+  const admin = await isAdminRequest({
+    headers: req.headers,
+    remoteAddress: req.socket?.remoteAddress,
+    verifier: accessVerifier,
+    // The public beta hostname is always the read-only preview.
+    publicHosts: ["baseline-beta.besada.net"],
+  });
+  publicPreviewByRequest.set(req, !admin);
+}
+
 function isPublicPreviewRequest(req) {
-  if (req.headers["x-baseline-public-preview"] === "true") return true;
-  const host = String(req.headers["x-forwarded-host"] ?? req.headers.host ?? "").split(",")[0].trim().toLowerCase().replace(/:\d+$/, "");
-  if (host === "baseline-beta.besada.net") return true;
-  // Cloudflare Access adds a signed assertion to the protected hostname.
-  // Treat every tunnel request without that assertion as public, even if a
-  // proxy rewrites Host or drops the normal Cloudflare tracing header. Direct
-  // LAN use remains available for recovery and local administration.
-  const directLan = host === "192.168.50.230" || host === "localhost" || host === "127.0.0.1";
-  if (directLan) return false;
-  return !req.headers["cf-access-jwt-assertion"] && !req.headers["cf-access-authenticated-user-email"];
+  return publicPreviewByRequest.get(req) ?? true;
 }
 
 function requestHeadersForUpstream(req) {
@@ -541,7 +560,8 @@ function forward(req, res) {
   req.pipe(proxy);
 }
 
-http.createServer((req, res) => {
+http.createServer(async (req, res) => {
+  await classifyRequest(req).catch(() => publicPreviewByRequest.set(req, true));
   if (req.url?.startsWith("/api/tracker")) {
     handleTracker(req, res).catch((error) => { res.writeHead(502); res.end(`Price service error: ${error.message}`); });
     return;

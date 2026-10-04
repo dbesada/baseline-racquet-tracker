@@ -20,7 +20,15 @@ npm run build
 npm test
 ```
 
-Check `package.json` for the complete scripts list. Some catalog refreshes and retailer checks require environment variables; use `.env.example` as the template and keep real credentials in an untracked local `.env` or a secret manager.
+Check `package.json` for the complete scripts list. Some catalog refreshes and retailer checks require environment variables; copy `.env.example` to `.env` as the template and keep real credentials in that untracked file or a secret manager.
+
+## Access control
+
+The relay (`scripts/baseline-relay.mjs`) decides who may change settings or start price checks. A request is an admin request only if it comes directly from the local network, or if it arrives through Cloudflare with a valid Cloudflare Access token for this application. Everyone else gets the read-only public preview. To enable admin access through Cloudflare, set `CF_ACCESS_TEAM_DOMAIN` and `CF_ACCESS_AUD` on the relay service (see `.env.example` and `deploy/truenas-compose.yml`).
+
+## Releasing to TrueNAS
+
+The release scripts verify the TrueNAS certificate. Start Node with `NODE_EXTRA_CA_CERTS` pointing at the TrueNAS certificate file. If that is not possible, set `BASELINE_ALLOW_INSECURE_TLS=1` for a single run on a trusted network.
 
 ## Project map
 

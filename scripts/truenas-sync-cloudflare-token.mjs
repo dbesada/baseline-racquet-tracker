@@ -1,17 +1,26 @@
 import fs from "node:fs";
 
-process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+// TrueNAS ships a self-signed certificate. Trust it explicitly by starting Node
+// with NODE_EXTRA_CA_CERTS pointing at that certificate file, instead of turning
+// verification off. As a temporary escape hatch on a trusted LAN, set
+// BASELINE_ALLOW_INSECURE_TLS=1 to restore the old behaviour for one run.
+if (process.env.BASELINE_ALLOW_INSECURE_TLS === "1") {
+  console.warn("TLS certificate verification is DISABLED for this run (BASELINE_ALLOW_INSECURE_TLS=1).");
+  process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+}
+const truenasHost = process.env.TRUENAS_HOST ?? "192.168.50.230";
+const truenasApiKeyFile = process.env.TRUENAS_API_KEY_FILE ?? "C:/AI/.codex/truenas-api-key.txt";
 
 const token = process.env.BASELINE_CLOUDFLARE_TUNNEL_TOKEN?.trim();
 if (!token || token.length < 100 || /\s/.test(token)) {
   throw new Error("BASELINE_CLOUDFLARE_TUNNEL_TOKEN is missing or invalid");
 }
 
-const apiKey = fs.readFileSync("C:/AI/.codex/truenas-api-key.txt", "utf8").trim();
+const apiKey = fs.readFileSync(truenasApiKeyFile, "utf8").trim();
 const destination = "/mnt/pool0/apps/baseline/direct-data/cloudflare-tunnel-token";
 let nextId = 1;
 const pending = new Map();
-const socket = new WebSocket("wss://192.168.50.230/api/current");
+const socket = new WebSocket(`wss://${truenasHost}/api/current`);
 
 socket.addEventListener("message", (event) => {
   const message = JSON.parse(event.data);
@@ -46,7 +55,7 @@ async function main() {
   upload.set("data", JSON.stringify({ method: "filesystem.put", params: [destination] }));
   upload.set("file", new Blob([token]), "cloudflare-tunnel-token");
   try {
-    const response = await fetch("https://192.168.50.230/_upload/", {
+    const response = await fetch(`https://${truenasHost}/_upload/`, {
       method: "POST",
       headers: { Authorization: `Bearer ${apiKey}` },
       body: upload,

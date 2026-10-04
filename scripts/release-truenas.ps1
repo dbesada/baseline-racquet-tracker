@@ -17,7 +17,7 @@ try {
   }
   if ($LASTEXITCODE -ne 0) { throw 'Tests failed; release cancelled.' }
 
-  tar.exe -czf $archive --exclude=.git --exclude=node_modules --exclude=.vinext --exclude=output --exclude=.playwright-cli -C $root .
+  tar.exe -czf $archive --exclude=.git --exclude=.env --exclude=.env.* --exclude=node_modules --exclude=.vinext --exclude=output --exclude=.playwright-cli -C $root .
   if ($LASTEXITCODE -ne 0) { throw 'Release source archive could not be created.' }
 
   node (Join-Path $PSScriptRoot 'truenas-registry-release.mjs') $Version $archive
