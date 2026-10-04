@@ -10,7 +10,12 @@ import { createPublicKey, verify as verifySignature } from "node:crypto";
 //     header that Cloudflare adds and a client cannot remove) is admin only if
 //     its Cloudflare Access token is cryptographically valid for this team and
 //     application. The mere presence of a header proves nothing.
-//  2. Direct LAN admin is allowed only when the request carries no proxy or
+//  2. Tailscale Serve (tailnet only) adds a Tailscale-User-Login header and
+//     removes any copy a client sends; Funnel (public) traffic never carries
+//     it. A request with that header is admin only if it came from Tailscale
+//     on this machine (loopback peer) and the login is on the configured
+//     allowlist.
+//  3. Direct LAN admin is allowed only when the request carries no proxy or
 //     forwarding headers, its Host header is a known LAN host, and the socket
 //     peer is a private or loopback address. X-Forwarded-Host is never trusted.
 //
@@ -133,6 +138,16 @@ function normalizeHost(value) {
   return String(value ?? "").split(",")[0].trim().toLowerCase().replace(/:\d+$/, "");
 }
 
+export function isLoopbackAddress(address) {
+  const value = String(address ?? "").trim().toLowerCase().replace(/^::ffff:/, "");
+  return value === "::1" || /^127\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(value);
+}
+
+/** Parses a comma-separated allowlist of Tailscale logins (case-insensitive). */
+export function parseLoginList(value) {
+  return String(value ?? "").split(",").map((entry) => entry.trim().toLowerCase()).filter(Boolean);
+}
+
 export function isPrivateOrLoopbackAddress(address) {
   const value = String(address ?? "").trim().toLowerCase().replace(/^::ffff:/, "");
   if (value === "::1") return true;
@@ -157,6 +172,7 @@ export async function isAdminRequest({
   verifier = null,
   lanHosts = DEFAULT_LAN_HOSTS,
   publicHosts = DEFAULT_PUBLIC_HOSTS,
+  tailscaleAdmins = [],
 }) {
   try {
     if (headers["x-baseline-public-preview"] === "true") return false;
@@ -175,7 +191,15 @@ export async function isAdminRequest({
       return Boolean(await verifier.verify(token));
     }
 
-    // Not through Cloudflare: allow only a direct LAN request. Any sign of a
+    // Through Tailscale Serve: trust the identity header only from the local
+    // Tailscale proxy, and only for allowlisted logins.
+    const tailscaleLogin = headers["tailscale-user-login"];
+    if (typeof tailscaleLogin === "string" && tailscaleLogin.trim()) {
+      if (!isLoopbackAddress(remoteAddress)) return false;
+      return tailscaleAdmins.includes(tailscaleLogin.trim().toLowerCase());
+    }
+
+    // Not through Cloudflare or Tailscale Serve: allow only a direct LAN request. Any sign of a
     // proxy in front (Tailscale, another reverse proxy) means we cannot trust
     // the Host header, so the request is public.
     const proxied = hasHeaderMatching(

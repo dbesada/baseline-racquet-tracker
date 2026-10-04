@@ -3,7 +3,7 @@ import { createHash } from "node:crypto";
 import { spawn } from "node:child_process";
 import { appendFile, readFile, rename, writeFile } from "node:fs/promises";
 import { gzipSync } from "node:zlib";
-import { createAccessVerifier, isAdminRequest } from "./access-control.mjs";
+import { createAccessVerifier, isAdminRequest, parseLoginList } from "./access-control.mjs";
 
 const upstream = `http://${process.env.BASELINE_UPSTREAM_HOST ?? "127.0.0.1"}:${process.env.BASELINE_UPSTREAM_PORT ?? "4001"}`;
 const upstreamUrl = new URL(upstream);
@@ -25,6 +25,9 @@ const accessVerifier = createAccessVerifier({
 if (!accessVerifier) {
   console.warn("CF_ACCESS_TEAM_DOMAIN / CF_ACCESS_AUD not set: admin actions are limited to the local network.");
 }
+// Tailscale logins (comma-separated) allowed to administer through Tailscale
+// Serve, for example from the Android app. Empty means Tailscale is read-only.
+const tailscaleAdmins = parseLoginList(process.env.BASELINE_TAILSCALE_ADMINS);
 const publicPreviewByRequest = new WeakMap();
 const checkEveryMs = 3 * 60 * 60 * 1000;
 let activeCheck = null;
@@ -398,6 +401,7 @@ async function classifyRequest(req) {
     verifier: accessVerifier,
     // The public beta hostname is always the read-only preview.
     publicHosts: ["baseline-beta.besada.net"],
+    tailscaleAdmins,
   });
   publicPreviewByRequest.set(req, !admin);
 }

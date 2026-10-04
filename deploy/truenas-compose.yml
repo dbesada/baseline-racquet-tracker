@@ -36,6 +36,10 @@ services:
       # While either is empty, admin actions work only from the local network.
       CF_ACCESS_TEAM_DOMAIN: "lively-credit-1a2e.cloudflareaccess.com"
       CF_ACCESS_AUD: "f9e0a71b302291da27aeae2bebf05f77559d446f5a7b034bac0cc5f324c0cfbe"
+      # Tailscale logins (comma-separated) that may change settings through the
+      # Tailscale address, which the Android app uses. Check your login in the
+      # Tailscale admin console (Users). Leave empty to make Tailscale read-only.
+      BASELINE_TAILSCALE_ADMINS: "davidsamir89@gmail.com"
     volumes:
       - /mnt/pool0/apps/baseline/direct-data:/app/.data
     command: ["sleep 8; exec node /app/scripts/baseline-relay.mjs"]
