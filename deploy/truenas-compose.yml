@@ -34,8 +34,8 @@ services:
       # in the Cloudflare Zero Trust dashboard (team domain such as
       # "myteam.cloudflareaccess.com", and the application's Audience tag).
       # While either is empty, admin actions work only from the local network.
-      CF_ACCESS_TEAM_DOMAIN: ""
-      CF_ACCESS_AUD: ""
+      CF_ACCESS_TEAM_DOMAIN: "lively-credit-1a2e.cloudflareaccess.com"
+      CF_ACCESS_AUD: "f9e0a71b302291da27aeae2bebf05f77559d446f5a7b034bac0cc5f324c0cfbe"
     volumes:
       - /mnt/pool0/apps/baseline/direct-data:/app/.data
     command: ["sleep 8; exec node /app/scripts/baseline-relay.mjs"]
