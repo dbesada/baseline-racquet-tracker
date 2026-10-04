@@ -31,6 +31,10 @@ const remoteArchive = `/mnt/pool0/apps/baseline/inbox/baseline-src-${version}.ta
 const marker = `/mnt/pool0/apps/baseline/inbox/baseline-registry-${version}-ready`;
 const containerArchive = `/release/baseline-src-${version}.tar.gz`;
 const containerMarker = `/release/baseline-registry-${version}-ready`;
+// The registry password travels in a private file (mode 600) that the builder
+// reads and deletes, so it never appears in the TrueNAS app configuration.
+const remotePasswordFile = `/mnt/pool0/apps/baseline/inbox/baseline-registry-pass-${version}`;
+const containerPasswordFile = `/release/baseline-registry-pass-${version}`;
 const persistentSettingsPath = "/mnt/pool0/apps/baseline/direct-data/baseline-settings.json";
 
 let nextId = 1;
@@ -87,6 +91,21 @@ async function ensureRegistry() {
   }
 }
 
+async function uploadRegistryPassword() {
+  const upload = new FormData();
+  upload.set("data", JSON.stringify({ method: "filesystem.put", params: [remotePasswordFile, { mode: 0o600 }] }));
+  upload.set("file", new Blob([registryCredentials.password]), path.basename(remotePasswordFile));
+  const response = await fetch(`https://${truenasHost}/_upload/`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${apiKey}` },
+    body: upload,
+    signal: AbortSignal.timeout(45_000),
+  });
+  if (!response.ok) throw new Error(`Registry credential upload returned HTTP ${response.status}`);
+  const stored = await rpc("filesystem.stat", [remotePasswordFile]);
+  if (!stored?.size) throw new Error("The registry credential was not written to TrueNAS");
+}
+
 async function backupLiveSettings() {
   try {
     const response = await fetch(`http://${truenasHost}:4600/api/tracker`, { signal: AbortSignal.timeout(20_000) });
@@ -127,16 +146,16 @@ function builderCompose() {
     "    entrypoint: [\"/bin/sh\", \"-lc\"]",
     "    environment:",
     `      REGISTRY_USER: ${JSON.stringify(registryCredentials.username)}`,
-    `      REGISTRY_PASS: ${JSON.stringify(registryCredentials.password)}`,
     "    volumes:",
     "      - /var/run/docker.sock:/var/run/docker.sock",
     "      - /mnt/pool0/apps/baseline/inbox:/release",
     "    command:",
     "      - >-",
     `        exec > /release/baseline-publisher-${version}.log 2>&1; set -e; rm -f ${containerMarker};`,
+    `        trap 'rm -f ${containerPasswordFile}' EXIT;`,
     "        rm -rf /tmp/baseline-src && mkdir -p /tmp/baseline-src;",
     `        tar -xzf ${containerArchive} -C /tmp/baseline-src;`,
-    '        printf \'%s\' "$$REGISTRY_PASS" | docker login ' + registryHost + ' --username "$$REGISTRY_USER" --password-stdin;',
+    `        docker login ${registryHost} --username "$$REGISTRY_USER" --password-stdin < ${containerPasswordFile};`,
     `        docker build --pull -t ${image} /tmp/baseline-src;`,
     `        docker push ${image};`,
     `        touch ${containerMarker}`,
@@ -183,6 +202,7 @@ async function main() {
     if (!uploaded?.size) throw new Error("The source archive was not written to TrueNAS");
 
     await ensureRegistry();
+    await uploadRegistryPassword();
     await deleteApp(builderName);
 
     console.log(`Publishing ${image}`);

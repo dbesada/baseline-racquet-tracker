@@ -42,3 +42,15 @@ test("the relay no longer trusts client-supplied host forwarding for admin", () 
   assert.doesNotMatch(relay, /cf-access-jwt-assertion"\]\s*&&/);
   assert.match(relay, /isAdminRequest/);
 });
+
+test("the registry password is passed in a private file, never in the app config", () => {
+  const source = read("scripts/truenas-registry-release.mjs");
+  assert.doesNotMatch(source, /REGISTRY_PASS/, "no REGISTRY_PASS variable in the generated compose");
+  assert.match(source, /--password-stdin < \$\{containerPasswordFile\}/);
+  assert.match(source, /trap 'rm -f \$\{containerPasswordFile\}' EXIT/);
+  assert.match(source, /mode: 0o600/);
+  assert.ok(
+    source.indexOf("await uploadRegistryPassword()") < source.indexOf("custom_compose_config_string: builderCompose()"),
+    "the password file must be uploaded before the builder app starts",
+  );
+});
