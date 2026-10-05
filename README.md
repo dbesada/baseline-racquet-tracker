@@ -28,6 +28,18 @@ Check `package.json` for the complete scripts list. Some catalog refreshes and r
 
 The relay (`scripts/baseline-relay.mjs`) decides who may change settings or start price checks. A request is an admin request only if it comes directly from the local network, or if it arrives through Cloudflare with a valid Cloudflare Access token for this application. Everyone else gets the read-only public preview. To enable admin access through Cloudflare, set `CF_ACCESS_TEAM_DOMAIN` and `CF_ACCESS_AUD` on the relay service (see `.env.example` and `deploy/truenas-compose.yml`).
 
+## Tailscale routes
+
+The Android app reaches Baseline through the NAS's Tailscale address, and eBay's account-deletion callback arrives through Tailscale Funnel. These routes are settings inside the TrueNAS Tailscale app, not part of `deploy/truenas-compose.yml`, and they persist across restarts. If the Tailscale app is reinstalled or its state is reset, apply them again from a TrueNAS shell:
+
+```sh
+docker exec ix-tailscale-tailscale-1 tailscale serve --bg --https=443 http://127.0.0.1:4600
+docker exec ix-tailscale-tailscale-1 tailscale funnel --bg --https=8443 http://127.0.0.1:4602
+docker exec ix-tailscale-tailscale-1 tailscale serve status
+```
+
+Port 443 is the relay, private to the tailnet. Port 8443 is the eBay callback, public through Funnel.
+
 ## Releasing to TrueNAS
 
 The containers run as the unprivileged `node` user (uid 1000), so uid 1000 must own the data folders on the NAS: `/mnt/pool0/apps/baseline/direct-data` and `/mnt/pool0/apps/baseline/direct-wrangler`.
