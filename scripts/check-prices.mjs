@@ -1300,7 +1300,7 @@ function accessoryBrand(value, title = "") {
     ["gamma", "Gamma"], ["head", "Head"], ["kimony", "Kimony"],
     ["luxilon", "Luxilon"], ["prince", "Prince"], ["pro kennex", "ProKennex"],
     ["prokennex", "ProKennex"], ["solinco", "Solinco"], ["tecnifibre", "Tecnifibre"],
-    ["tourna", "Tourna"], ["volkl", "Volkl"], ["vÃ¶lkl", "Volkl"],
+    ["tourna", "Tourna"], ["volkl", "Volkl"], ["völkl", "Volkl"],
     ["wilson", "Wilson"], ["yonex", "Yonex"],
   ]);
   const normalizedTitle = String(title ?? "").trim().toLocaleLowerCase("en-CA");
