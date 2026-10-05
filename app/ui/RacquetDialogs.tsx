@@ -9,6 +9,8 @@ const comparisonRows: Array<[string, keyof RacquetSpec]> = [
   ["Head size", "head"], ["Length", "length"], ["Unstrung weight", "weight"], ["Strung weight", "strungWeight"], ["Unstrung balance", "balance"], ["Strung balance", "strungBalance"], ["Swingweight", "swingweight"], ["Stiffness / flex", "stiffness"], ["Beam width", "beam"], ["Composition", "composition"], ["String pattern", "pattern"], ["Grip sizes", "gripSizes"], ["Recommended strings", "recommendedStrings"], ["Recommended tension", "tension"], ["Colour", "color"], ["Made in", "madeIn"], ["Product code", "productCode"], ["Notable player (endorsed line)", "notablePlayer"], ["Playing profile", "profile"],
 ];
 
+const comparisonNote = "Official manufacturer specifications are the primary record and are independently checked against matching Canadian retailer listings. Measurements use one consistent format; secondary units are shown for convenience. Strung measurements and RA can vary by setup, sample, and generation.";
+
 // Closes a dialog when the click lands on the backdrop itself, not the panel.
 const closeOnBackdrop = (close: () => void) => (event: React.MouseEvent) => { if (event.target === event.currentTarget) close(); };
 
@@ -114,9 +116,9 @@ export function ComparisonDialog({ compareKeys, data, specs, refreshingModels, o
           <div><p className="eyebrow">SIDE-BY-SIDE</p><h2 id="compare-title">Racquet comparison</h2></div>
           <button onClick={onClose} aria-label="Close comparison">×</button>
         </div>
-        <p className="compare-note">Official manufacturer specifications are the primary record and are independently checked against matching Canadian retailer listings. Measurements use one consistent format; secondary units are shown for convenience. Strung measurements and RA can vary by setup, sample, and generation.</p>
+        <p className="compare-note">{comparisonNote}</p>
         <div className="comparison-scroll">
-          <table className="comparison-table" style={{ minWidth: `${210 + compareKeys.length * 180}px` }}>
+          <table className="comparison-table" style={{ "--compare-columns": compareKeys.length } as React.CSSProperties}>
             <thead>
               <tr><th>Specification</th>{compareKeys.map((key) => <th key={key}><RacquetImage modelKey={key} spec={specs[key]} className="comparison-frame-thumb" width={82} height={108} alt={`${data?.modelNames[key] ?? key} racquet`} onPreview={onPreviewImage} /><strong>{data?.modelNames[key] ?? key}</strong><span>{modelBrand(key)}</span>{refreshingModels.has(key) && <small className="model-refresh-state"><i />Refreshing…</small>}</th>)}</tr>
             </thead>
@@ -136,6 +138,8 @@ export function ComparisonDialog({ compareKeys, data, specs, refreshingModels, o
             </tbody>
           </table>
         </div>
+        {/* Phones show the note collapsed under the table so the table gets the screen. */}
+        <details className="compare-note-mobile"><summary>About these specs</summary><p>{comparisonNote}</p></details>
       </section>
     </div>
   );
