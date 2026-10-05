@@ -1,13 +1,15 @@
 import assert from "node:assert/strict";
-import { access, readFile } from "node:fs/promises";
+import { access, readdir, readFile } from "node:fs/promises";
 import test from "node:test";
 import { defaultTargets, modelNames } from "../app/lib/racquet-catalogue.js";
 
-// The main UI is split across the component and its data/helper modules.
-const uiFiles = ["BaselineApp.tsx", "baseline-catalogue.ts", "baseline-types.ts"];
-const readUiSource = async () => (await Promise.all(
-  uiFiles.map((file) => readFile(new URL(`../app/ui/${file}`, import.meta.url), "utf8")),
-)).join("\n");
+// The main UI is split across BaselineApp.tsx, one component file per tab or
+// dialog, and the data/helper modules, so read every TypeScript file in app/ui.
+const uiDirectory = new URL("../app/ui/", import.meta.url);
+const readUiSource = async () => {
+  const files = (await readdir(uiDirectory)).filter((file) => /\.tsx?$/.test(file)).sort();
+  return (await Promise.all(files.map((file) => readFile(new URL(file, uiDirectory), "utf8")))).join("\n");
+};
 
 test("ships the finished Baseline tracker and its price API", async () => {
   const [page, ui, coach, styles, route, layout, hosting, monitor, relay, release] = await Promise.all([
@@ -94,7 +96,7 @@ test("ships the finished Baseline tracker and its price API", async () => {
   assert.match(styles, /font-size: clamp\(18px/);
   assert.match(monitor, /officialImageUrl/);
   assert.match(ui, /isManufacturerSpec/);
-  assert.match(ui, /resolvedRacquetSpecs\[modelKey\][?][.]imageUrl/);
+  assert.match(ui, /modelImage\(modelKey, spec[?][.]imageUrl\)/);
   assert.match(ui, /alphabeticalBrandList/);
   assert.match(styles, /select option, select optgroup/);
   assert.match(styles, /font-size: \.875rem !important/);
@@ -119,7 +121,7 @@ test("ships the finished Baseline tracker and its price API", async () => {
   assert.match(monitor, /fetchShopifyCatalogs/);
   assert.match(monitor, /new Map\(catalogues[.]flat\(\)[.]map/);
   assert.match(monitor, /for \(let page = 1; page <= 4; page \+= 1\)/);
-  assert.match(ui, /resolvedRacquetSpecs\[modelKey\][.]stiffness/);
+  assert.match(ui, /spec[.]stiffness/);
   assert.match(route, /Sports Virtuoso/);
   assert.match(route, /Racquet Science/);
   assert.match(route, /TennisNetPro/);
@@ -177,7 +179,7 @@ test("ships the finished Baseline tracker and its price API", async () => {
   assert.match(route, /baseline-beta[.]besada[.]net/);
   assert.match(route, /This action is available in the protected Baseline admin app/);
   assert.match(ui, /LAST VERIFIED PRICE/);
-  assert.match(ui, /renderSourceHealth/);
+  assert.match(ui, /<SourceHealth data=\{data\} \/>/);
   assert.match(styles, /\.source-health/);
   assert.match(monitor, /resilientFetch/);
   assert.match(monitor, /settleInPool/);
@@ -202,7 +204,7 @@ test("ships the finished Baseline tracker and its price API", async () => {
   assert.match(ui, /When to restring/);
   assert.match(ui, /Advanced string lab/);
   assert.match(ui, /LIVE CANADIAN EXAMPLES/);
-  assert.match(ui, /stringGuideExamples/);
+  assert.match(ui, /<StringGuide examples=\{stringMarket[.]guideExamples\} \/>/);
   assert.match(ui, /Your Local ATP\/WTA Tour Stringer/);
   assert.match(ui, /gaostringinglab\.com/);
   assert.match(ui, /Special editions/);
@@ -215,10 +217,10 @@ test("ships the finished Baseline tracker and its price API", async () => {
   assert.match(ui, /\["all", \.\.\.brandList, "catalogue", "special", "strings", "balls", "accessories", "guide", "string-guide"\]/);
   assert.match(ui, /Tennis strings/);
   assert.match(ui, /Find the right feel, type, and gauge/);
-  assert.match(ui, /stringGroupsByType/);
+  assert.match(ui, /market[.]groupsByType[.]map/);
   assert.match(ui, /Construction type/);
   assert.match(ui, /All brands/);
-  assert.match(ui, /availableStringBrands/);
+  assert.match(ui, /market[.]availableBrands[.]map/);
   assert.match(ui, /All gauges/);
   assert.match(ui, /Package format/);
   assert.match(ui, /All formats/);
@@ -238,9 +240,9 @@ test("ships the finished Baseline tracker and its price API", async () => {
   assert.match(styles, /\.string-grid/);
   assert.match(ui, /Accessories/);
   assert.match(ui, /Everything around the frame, in one place/);
-  assert.match(ui, /accessoryGroupsByCategory/);
+  assert.match(ui, /market[.]groupsByCategory[.]map/);
   assert.match(ui, /All accessory types/);
-  assert.match(ui, /availableAccessoryBrands/);
+  assert.match(ui, /useAccessoryMarket/);
   assert.match(ui, /Biggest savings/);
   assert.match(monitor, /const accessoryFeeds =/);
   assert.match(monitor, /fetchAccessoryStore/);
@@ -250,7 +252,7 @@ test("ships the finished Baseline tracker and its price API", async () => {
   assert.match(styles, /\.accessory-market-summary/);
   assert.match(styles, /\.accessory-grid/);
   assert.match(ui, /specialGripLabels/);
-  assert.match(ui, /specialEditionGroups/);
+  assert.match(ui, /useSpecialEditions/);
   assert.match(ui, /specialEditionModelKey/);
   assert.match(ui, /UNIQUE RACQUETS/);
   assert.match(ui, /Compare \{group\.offers\.length\} retailer/);
@@ -262,7 +264,7 @@ test("ships the finished Baseline tracker and its price API", async () => {
   assert.match(relay, /content-encoding/);
   assert.match(relay, /optimized-v\\d\+/);
   assert.match(relay, /max-age=31536000, immutable/);
-  assert.match(ui, /activeBrand === "catalogue" && renderCatalogueControls/);
+  assert.match(ui, /activeBrand === "catalogue" && <CatalogueControls/);
   assert.match(ui, /const cataloguePageSize = 24/);
   assert.match(ui, /Show 24 more/);
   assert.doesNotMatch(ui, /CATALOGUE VIEW/);
@@ -506,7 +508,7 @@ test("recognizes the expanded current and legacy racquet catalogue", async () =>
     assert.match(ui, new RegExp(field));
     assert.match(monitor, new RegExp(field));
   }
-  assert.match(ui, /filteredSpecialEditionGroups/);
+  assert.match(ui, /filteredGroups[.]map\(\(group\) => <SpecialEditionCard/);
   assert.match(ui, /Most retailer choices/);
   assert.match(ui, /retailer-corrected/);
 });

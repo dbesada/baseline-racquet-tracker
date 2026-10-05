@@ -249,3 +249,12 @@ export type BallGroup = {
   offers: BallOffer[];
   bestOffer: BallOffer;
 };
+
+// Inline editing of a model's target price, shared by the new and used cards.
+export type TargetEditor = {
+  editingKey: string | null;
+  draft: string;
+  setDraft: (value: string) => void;
+  start: (editingKey: string, target: number) => void;
+  save: (modelKey: string, market?: "new" | "used") => void;
+};
