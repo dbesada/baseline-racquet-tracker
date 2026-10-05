@@ -71,7 +71,7 @@ test("ships the finished Baseline tracker and its price API", async () => {
   assert.match(ui, /catalogueMetrics/);
   assert.match(ui, /Comparable unit-sales totals are not publicly reported/);
   assert.match(monitor, /stiffnessMatch/);
-  assert.match(monitor, /manufacturerSpecAuditVersion = 5/);
+  assert.match(monitor, /manufacturerSpecAuditVersion = 6/);
   assert.match(monitor, /BASELINE_FORCE_MODEL_AUDIT/);
   assert.match(relay, /action.*models/);
   assert.match(relay, /modelRefreshState/);
@@ -546,6 +546,42 @@ test("extracts the full comparison specification set from retailer or manufactur
   assert.equal(metricTension.tension, "51–60 lbs");
   const flexForce = extractRacquetSpecs("Head Size 100 sq. in. Unstrung Weight 300 g. Composition HM Graphite / 2G-Namd Flex Force / SERVO FILTER. String Pattern 16 x 19. Recommended tension 50 - 60 lbs.", "Yonex official", "https://yonex.example/percept");
   assert.equal(flexForce.stiffness, undefined);
+});
+
+test("does not read a stringing-tension label as recommended strings", async () => {
+  const monitor = await readFile(new URL("../scripts/check-prices.mjs", import.meta.url), "utf8");
+  const start = monitor.indexOf("function plainText");
+  const end = monitor.indexOf("\nfunction manufacturerFor", start);
+  const { extractRacquetSpecs, repairRecommendedStrings } = Function(`${monitor.slice(start, end)}; return { extractRacquetSpecs, repairRecommendedStrings };`)();
+  const specs = (html) => extractRacquetSpecs(html, "Wilson official", "https://wilson.example/frame");
+
+  // Wilson's spec tables (and retailers copying them) say "Recommended
+  // Stringing Tension"; the old pattern read "Recommended String" + "ing".
+  const wilson = specs("<tr><th>Head Size</th><td>98 sq. in.</td></tr><tr><th>Unstrung Weight</th><td>305 g</td></tr><tr><th>String Pattern</th><td>16 x 19</td></tr><tr><th>Recommended Stringing Tension</th><td>50-60 lbs</td></tr><tr><th>Made In</th><td>Vietnam</td></tr>");
+  assert.equal(wilson.recommendedStrings, undefined);
+  assert.equal(wilson.tension, "50–60 lbs");
+  assert.equal(specs("Head Size 98 sq. in. Unstrung Weight 305 g Recommended String Tension 50 - 60 lbs Made In Vietnam").recommendedStrings, undefined);
+
+  // A real strings field is still read, including after the tension label.
+  const tensionFirst = specs("Head Size 100 sq. in. Unstrung Weight 300 g. Recommended Stringing Tension: 50 - 60 lbs. Recommended Strings: Wilson NXT Power. Made In: China.");
+  assert.match(tensionFirst.recommendedStrings, /^Wilson NXT Power/);
+  const yonex = extractRacquetSpecs("Head Size 98 sq. in. Unstrung Weight 305 g. Recommended String POLYTOUR PRO / REXIS SPEED String Pattern 16 x 19 Recommended Tension 45 - 60 lbs", "Yonex official", "https://yonex.example/ezone");
+  assert.equal(yonex.recommendedStrings, "POLYTOUR PRO / REXIS SPEED");
+
+  // A link around part of a name no longer splits it: Sports Virtuoso links
+  // "POLYTOUR PR" and leaves the "O" outside the link.
+  const linked = extractRacquetSpecs('<tr><th>Head Size</th><td>100 sq. in.</td></tr><tr><th>Unstrung Weight</th><td>250 g</td></tr><tr><th>Recommended String</th><td><br><a href="https://www.yonex.com/tennis/strings/ptgp115">POLYTOUR PR</a>O<br></td></tr><tr><th>String Pattern</th><td>16 x 19</td></tr>', "Sports Virtuoso", "https://retailer.example/vcore");
+  assert.equal(linked.recommendedStrings, "POLYTOUR PRO");
+  // ATR Sports lists Babolat's XALT as "XLAT".
+  const typo = extractRacquetSpecs("Head Size 100 sq. in. Unstrung Weight 285 g. Recommended String XLAT String Pattern 16 x 19", "ATR Sports", "https://retailer.example/evo");
+  assert.equal(typo.recommendedStrings, "XALT");
+
+  // Values saved before these fixes are repaired when the previous state loads.
+  const saved = { "defyer-100-v1": { recommendedStrings: "ing", tension: "50–60 lbs" }, "blade-v9": { recommendedStrings: "Tension 50-60 lbs" }, "evo-aero-gen2": { recommendedStrings: "XLAT" }, "ezone-98": { recommendedStrings: "POLYTOUR PRO / REXIS SPEED" } };
+  for (const value of Object.values(saved)) repairRecommendedStrings(value);
+  assert.deepEqual(saved, { "defyer-100-v1": { tension: "50–60 lbs" }, "blade-v9": {}, "evo-aero-gen2": { recommendedStrings: "XALT" }, "ezone-98": { recommendedStrings: "POLYTOUR PRO / REXIS SPEED" } });
+  repairRecommendedStrings(null);
+  assert.match(monitor, /const previous = await readPrevious\(\);\s*\n(?:\/\/.*\n)*for \(const specs of \[\.\.\.Object\.values\(previous\.racquetSpecs \?\? \{\}\), \.\.\.Object\.values\(previous\.offers \?\? \{\}\)\.map\(\(offer\) => offer\?\.specs\)\]\) repairRecommendedStrings\(specs\);/);
 });
 
 test("cross-checks official specifications with distinct retailer catalogues", async () => {
