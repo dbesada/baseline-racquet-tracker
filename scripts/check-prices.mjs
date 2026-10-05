@@ -307,6 +307,8 @@ function plainText(value = "") {
   return String(value)
     .replace(/<script[\s\S]*?<\/script>/gi, " ")
     .replace(/<style[\s\S]*?<\/style>/gi, " ")
+    // A link around part of a word ("<a>POLYTOUR PR</a>O") must not split it.
+    .replace(/([a-z0-9])<\/?a\b[^>]*>(?=[a-z0-9])/gi, "$1")
     .replace(/<[^>]+>/g, " ")
     .replaceAll("&nbsp;", " ").replaceAll("&amp;", "&")
     .replaceAll("&sup2;", "²").replaceAll("&#178;", "²")
@@ -357,7 +359,7 @@ function extractRacquetSpecs(value, source, sourceUrl) {
   const madeIn = text.match(/made\s*in[^a-z]{0,12}([a-z][a-z .]{2,30}?)(?=\s+(?:item\s*code|product\s*code|sku|description|$))/i)?.[1]?.replace(/[.\s]+$/, "").trim();
   // "Recommended String(s)" must be a whole label, not the start of
   // "Recommended Stringing Tension" or "Recommended String Tension".
-  const recommendedStrings = text.match(/recommended\s*strings?\b(?![^a-z0-9]{0,20}tension\b)[^a-z0-9]{0,20}([a-z0-9™ +/&.,-]{3,120}?)(?=\s+(?:string(?:ing)?\s*pattern|(?:recommended\s*)?(?:stringing\s*)?tension|made\s*in|item\s*code|product\s*code|sku|$))/i)?.[1]?.trim();
+  const recommendedStrings = correctStringNames(text.match(/recommended\s*strings?\b(?![^a-z0-9]{0,20}tension\b)[^a-z0-9]{0,20}([a-z0-9™ +/&.,-]{3,120}?)(?=\s+(?:string(?:ing)?\s*pattern|(?:recommended\s*)?(?:stringing\s*)?tension|made\s*in|item\s*code|product\s*code|sku|$))/i)?.[1]?.trim());
   if (!head && !weight && !strungWeight && !pattern && !swingweight && !stiffness) return null;
   const balanceValue = balanceMatch?.[1];
   const balance = balanceValue ? `${Number(balanceValue) >= 100 ? (Number(balanceValue) / 10).toFixed(1) : Number(balanceValue).toFixed(1)} cm` : undefined;
@@ -390,11 +392,21 @@ function extractRacquetSpecs(value, source, sourceUrl) {
   };
 }
 
-// Before the label fix above, "Recommended Stringing Tension" was saved as
-// recommended strings "ing" (or "Tension …"). Spec merges keep old fields that
-// a new read no longer finds, so saved specs need these values removed.
-function dropMisreadRecommendedStrings(specs) {
-  if (specs && /^(?:ing|tension)\b/i.test(String(specs.recommendedStrings ?? "").trim())) delete specs.recommendedStrings;
+// String names misspelled on retailer pages, where the intended product is
+// unambiguous.
+const stringNameCorrections = [[/\bXLAT\b/gi, "XALT"]];
+
+function correctStringNames(value) {
+  return value && stringNameCorrections.reduce((text, [misspelling, name]) => text.replace(misspelling, name), value);
+}
+
+// Specs saved before the fixes above hold "ing" or "Tension …" (from the
+// "Recommended Stringing Tension" label) and uncorrected names. Spec merges
+// keep old fields that a new read no longer finds, so repair saved specs.
+function repairRecommendedStrings(specs) {
+  if (typeof specs?.recommendedStrings !== "string") return;
+  if (/^(?:ing|tension)\b/i.test(specs.recommendedStrings.trim())) delete specs.recommendedStrings;
+  else specs.recommendedStrings = correctStringNames(specs.recommendedStrings);
 }
 
 function manufacturerFor(modelKey) {
@@ -1511,7 +1523,7 @@ function mergeFreshWithFallback(fresh, stale) {
 }
 
 const previous = await readPrevious();
-for (const specs of [...Object.values(previous.racquetSpecs ?? {}), ...Object.values(previous.offers ?? {}).map((offer) => offer?.specs)]) dropMisreadRecommendedStrings(specs);
+for (const specs of [...Object.values(previous.racquetSpecs ?? {}), ...Object.values(previous.offers ?? {}).map((offer) => offer?.specs)]) repairRecommendedStrings(specs);
 const checkedAt = new Date().toISOString();
 let enabledNames = null;
 let configuredApifyToken = "";
