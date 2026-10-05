@@ -5,6 +5,7 @@ import { readFile, rename, writeFile } from "node:fs/promises";
 import { gzipSync } from "node:zlib";
 import { createAccessVerifier, isAdminRequest, parseLoginList } from "./access-control.mjs";
 import { createAuditLog } from "./audit-log.mjs";
+import { settingsAfterChange, settingsSnapshot } from "./persistent-settings.mjs";
 
 const upstream = `http://${process.env.BASELINE_UPSTREAM_HOST ?? "127.0.0.1"}:${process.env.BASELINE_UPSTREAM_PORT ?? "4001"}`;
 const upstreamUrl = new URL(upstream);
@@ -39,19 +40,6 @@ let modelRefreshState = null;
 let analyticsWrite = Promise.resolve();
 const selectedModelRefreshes = new Map();
 const selectedModelRefreshTtlMs = 10 * 60 * 1000;
-
-function settingsSnapshot(dashboard) {
-  return {
-    version: 1,
-    savedAt: new Date().toISOString(),
-    gripSize: dashboard.gripSize ?? "L3",
-    targets: dashboard.targets ?? {},
-    usedTargets: dashboard.usedTargets ?? {},
-    modelOrder: dashboard.modelOrder ?? [],
-    brandPicks: dashboard.brandPicks ?? {},
-    retailers: (dashboard.retailers ?? []).map(({ key, name, enabled }) => ({ key, name, enabled: Boolean(enabled) })),
-  };
-}
 
 async function readPersistentSettings() {
   try { return JSON.parse(await readFile(settingsFile, "utf8")); }
@@ -455,7 +443,8 @@ async function handleTracker(req, res) {
       return;
     }
     const updatedDashboard = await upstreamResponse.json();
-    await writePersistentSettings(settingsSnapshot(updatedDashboard));
+    // Only the field this PATCH changed: the API's database may still hold defaults.
+    await writePersistentSettings(settingsAfterChange(await readPersistentSettings(), parsedBody, updatedDashboard));
     if (/^L[0-5]$/.test(parsedBody.gripSize ?? "")) {
       let state = {};
       try { state = JSON.parse(await readFile(stateFile, "utf8")); } catch { /* Created by the first collector run. */ }
