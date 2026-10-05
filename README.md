@@ -44,6 +44,8 @@ Port 443 is the relay, private to the tailnet. Port 8443 is the eBay callback, p
 
 The containers run as the unprivileged `node` user (uid 1000), so uid 1000 must own the data folders on the NAS: `/mnt/pool0/apps/baseline/direct-data` and `/mnt/pool0/apps/baseline/direct-wrangler`.
 
+The API's database is kept in `direct-wrangler/state`, so it survives releases. The relay also keeps a copy of the settings in `direct-data/baseline-settings.json` and writes it into the database each time it starts, so a new or reset database gets the saved settings back.
+
 The release scripts verify the TrueNAS certificate. Start Node with `NODE_EXTRA_CA_CERTS` pointing at the TrueNAS certificate file. If that is not possible, set `BASELINE_ALLOW_INSECURE_TLS=1` for a single run on a trusted network.
 
 ## Project map

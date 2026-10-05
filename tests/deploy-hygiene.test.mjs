@@ -33,7 +33,7 @@ test("release scripts do not switch off TLS verification unless asked", () => {
 test("the TrueNAS deployment keeps the UI on loopback behind the relay", () => {
   const compose = read("deploy/truenas-compose.yml");
   assert.match(compose, /"start:loopback"/);
-  assert.match(read("package.json"), /"start:loopback":\s*"[^"]*--ip 127\.0\.0\.1"/);
+  assert.match(read("package.json"), /"start:loopback":\s*"[^"]*--ip 127\.0\.0\.1\b/);
   assert.match(compose, /CF_ACCESS_TEAM_DOMAIN/);
 });
 
@@ -73,4 +73,12 @@ test("the image runs as the unprivileged node user", () => {
   assert.match(dockerfile, /chown node:node [^\n]*dist\/server\/\.wrangler/);
   // The release writes the settings backup as root; the relay must still read it.
   assert.match(read("scripts/truenas-registry-release.mjs"), /\[persistentSettingsPath, \{ mode: 0o644 \}\]/);
+});
+
+test("the database is kept on the mounted folder, so it survives releases", () => {
+  const scripts = JSON.parse(read("package.json")).scripts;
+  for (const name of ["start", "start:loopback"]) {
+    assert.match(scripts[name], /--persist-to \.wrangler\/state\b/, `${name} must keep the database in .wrangler/state`);
+  }
+  assert.match(read("deploy/truenas-compose.yml"), /direct-wrangler:\/app\/\.wrangler\r?$/m);
 });
