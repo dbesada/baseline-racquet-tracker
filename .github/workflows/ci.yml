@@ -20,7 +20,4 @@ jobs:
       - run: npm ci --no-audit --no-fund
       # `npm test` builds the app and then runs every test in tests/.
       - run: npm test
-      # The linter currently reports existing errors in the UI files. It is
-      # advisory until those are fixed; remove continue-on-error then.
       - run: npm run lint
-        continue-on-error: true

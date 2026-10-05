@@ -178,6 +178,9 @@ export function BaselineCoach({ models, strings, gripLabel, raised = false, onCo
   useEffect(() => {
     try {
       const saved = window.localStorage.getItem(profileKey);
+      // Local storage is browser-only: reading it after hydration keeps the
+      // first render identical to the server's.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       if (saved) setSavedProfile(JSON.parse(saved) as CoachAnswers);
     } catch {
       // A blocked or malformed local profile should never stop the coach.

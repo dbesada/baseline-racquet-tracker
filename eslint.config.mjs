@@ -12,6 +12,10 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Build output: the app bundle and the Android wrapper's copied assets.
+    "dist/**",
+    "output/**",
+    "android-wrapper/android/**/build/**",
   ]),
 ]);
 

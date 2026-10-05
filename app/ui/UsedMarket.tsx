@@ -32,7 +32,9 @@ export function useUsedBoard(data: Dashboard | null) {
     });
     return keys;
   }, [data, availability, modelKeys, search, sort]);
-  const freshCount = useMemo(() => (data?.usedOffers ?? []).filter((offer) => Date.now() - new Date(offer.lastChecked).getTime() <= 86_400_000).length, [data]);
+  // Read the clock once per mount; calling it during render gives unstable results.
+  const [now] = useState(() => Date.now());
+  const freshCount = useMemo(() => (data?.usedOffers ?? []).filter((offer) => now - new Date(offer.lastChecked).getTime() <= 86_400_000).length, [data, now]);
   const targetHitCount = useMemo(() => new Set((data?.usedOffers ?? []).filter((offer) => offer.currentPrice !== null && offer.currentPrice <= (data?.usedTargets[offer.modelKey] ?? Math.round((data?.targets[offer.modelKey] ?? 250) * .68))).map((offer) => offer.modelKey)).size, [data]);
   const sourceCount = useMemo(() => new Set((data?.usedOffers ?? []).map((offer) => offer.store)).size, [data]);
   // Used listings for frames that are not on the watchlist.

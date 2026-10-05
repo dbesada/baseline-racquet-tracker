@@ -1,7 +1,9 @@
+import Link from "next/link";
+
 export default function PrivacyPage() {
   return (
     <main className="legal-page">
-      <a className="legal-brand" href="/">BASELINE</a>
+      <Link className="legal-brand" href="/">BASELINE</Link>
       <article>
         <p className="eyebrow">PRIVACY</p>
         <h1>Privacy at Baseline.</h1>
@@ -25,7 +27,7 @@ export default function PrivacyPage() {
         <h2>Changes</h2>
         <p>Baseline’s public beta records privacy-light, aggregate product analytics: page views, section browsing, comparison opens, Baseline Coach opens and retailer-link clicks. These counts do not include accounts, names, IP addresses, device identifiers, precise location, or individual browsing histories. Aggregate analytics are stored on Baseline’s own service for up to 90 days and are used only to improve the beta. This page will be updated before Baseline adds accounts, payments, advertising, native push notifications, or other personal-data handling.</p>
       </article>
-      <a className="legal-back" href="/">← Back to Baseline</a>
+      <Link className="legal-back" href="/">← Back to Baseline</Link>
     </main>
   );
 }

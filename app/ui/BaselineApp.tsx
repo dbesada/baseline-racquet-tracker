@@ -162,6 +162,9 @@ export function BaselineApp() {
     const capacitor = (window as typeof window & { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor;
     const standalone = window.matchMedia("(display-mode: standalone)").matches || Boolean((navigator as Navigator & { standalone?: boolean }).standalone);
     const ios = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    // Browser-only values: reading them after hydration keeps the first render
+    // identical to the server's.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setInstallContext(capacitor?.isNativePlatform?.() ? "native" : standalone ? "installed" : ios ? "ios" : "browser");
     const capturePrompt = (event: Event) => {
       event.preventDefault();
