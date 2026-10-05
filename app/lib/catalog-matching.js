@@ -1,9 +1,10 @@
 // Shared product matching for retailer listings.
 //
-// Used by both the tracker API (app/api/tracker/route.ts) and the scheduled
-// price monitor (scripts/check-prices.mjs). Before this module existed each had
-// its own copy and the copies had started to drift apart, so a fix made in one
-// place was missing in the other. Change matching rules here only.
+// Used by the price monitor (scripts/check-prices.mjs), the only code that reads
+// retailer pages. The tracker API (app/api/tracker/route.ts) used to keep its
+// own copy of these rules and of the retailer readers; the copies drifted apart
+// and production never ran the API's, so both were removed. Change matching
+// rules here only.
 
 const manufacturerModelCodes = new Map([
   ["WR207811", "blade-v10"], ["WR207911", "blade-98-18x20-v10"],

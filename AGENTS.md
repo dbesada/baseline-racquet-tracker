@@ -5,7 +5,7 @@ These instructions apply to the Baseline tennis equipment tracker repository.
 ## Project basics
 
 - This is the Canadian-first Baseline racquet and tennis gear tracker.
-- The web app uses Next-compatible React components with vinext/Vite. Main UI is in `app/ui/`; API routes are in `app/api/`; retailer catalogues and price checks are primarily in `scripts/check-prices.mjs`.
+- The web app uses Next-compatible React components with vinext/Vite. Main UI is in `app/ui/`; API routes are in `app/api/`; retailer catalogues and price checks are in `scripts/check-prices.mjs`, which the relay (`scripts/baseline-relay.mjs`) runs. The API route stores settings and serves the dashboard; it does not read retailer pages, so do not add retailer fetching there.
 - Product specifications should prefer manufacturer-published values, with retailer corroboration when available. Keep units and string package formats explicit.
 - Keep Canada as the default market. Do not enable new markets or retailers without checking their access method and existing market-isolation rules.
 - Preserve the existing public-beta read-only behavior and protected admin write behavior.

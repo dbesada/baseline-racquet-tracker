@@ -25,7 +25,6 @@ test("ships the finished Baseline tracker and its price API", async () => {
 
   assert.match(page, /BaselineApp/);
   assert.match(ui, /Wait for the/);
-  assert.match(route, /Wilson Blade 98/);
   assert.ok(Object.values(modelNames).includes("Wilson Blade 98 16x19 v8"));
   assert.match(route, /shortlist_slots/);
   assert.match(route, /shortlistSlotCount = 6/);
@@ -44,7 +43,7 @@ test("ships the finished Baseline tracker and its price API", async () => {
   await Promise.all(racquetImages.map((filename) => access(new URL(`../public/racquets/${filename.split("?")[0]}`, import.meta.url))));
   assert.match(route, /collections\/tennis-racquets/);
   assert.match(route, /price_history/);
-  assert.match(route, /isGripThree/);
+  assert.match(monitor, /isGripThree/);
   assert.match(route, /saleOffers/);
   assert.match(route, /retailer_settings/);
   assert.match(route, /brand_featured_slots/);
@@ -73,7 +72,6 @@ test("ships the finished Baseline tracker and its price API", async () => {
   assert.match(monitor, /BASELINE_FORCE_MODEL_AUDIT/);
   assert.match(relay, /action.*models/);
   assert.match(relay, /modelRefreshState/);
-  assert.match(route, /action.*models/);
   assert.match(ui, /Fetch new models/);
   assert.match(ui, /refreshSelectedModel/);
   assert.match(ui, /Refreshing specs &amp; photo/);
@@ -109,13 +107,13 @@ test("ships the finished Baseline tracker and its price API", async () => {
   assert.match(styles, /\.market-tabs button\.active, \.check-button, \.target-row form button, \.alert-toggle\.on/);
   assert.match(route, /HiSports/);
   assert.match(route, /racquetguys[.]ca\/collections\/adult-tennis-racquets\/products[.]json/);
-  assert.match(route, /racquetguys[.]ca\/collections\/used-tennis-racquets\/products[.]json/);
-  assert.match(route, /tenniscentral[.]ca\/collections\/racquets\/products[.]json/);
-  assert.match(route, /tennisgiant[.]com\/collections\/all-racquets\/products[.]json/);
-  assert.match(route, /tenniszon[.]com\/collections\/racquet-sale\/products[.]json/);
-  assert.match(route, /racketsandrunners[.]ca\/collections\/adult-tennis-rackets\/products[.]json/);
-  assert.match(route, /const productName = `\$\{product[.]vendor/);
-  assert.match(route, /\(\?:l\|g\|grip/);
+  assert.match(monitor, /racquetguys[.]ca\/collections\/used-tennis-racquets\/products[.]json/);
+  assert.match(monitor, /tenniscentral[.]ca\/collections\/racquets\/products[.]json/);
+  assert.match(monitor, /tennisgiant[.]com\/collections\/all-racquets\/products[.]json/);
+  assert.match(monitor, /tenniszon[.]com\/collections\/racquet-sale\/products[.]json/);
+  assert.match(monitor, /racketsandrunners[.]ca\/collections\/adult-tennis-rackets\/products[.]json/);
+  assert.match(monitor, /const productName = `\$\{product[.]vendor/);
+  assert.match(monitor, /\(\?:l\|g\|grip/);
   assert.match(monitor, /fetchShopifyCatalogs/);
   assert.match(monitor, /new Map\(catalogues[.]flat\(\)[.]map/);
   assert.match(monitor, /for \(let page = 1; page <= 4; page \+= 1\)/);
@@ -140,11 +138,10 @@ test("ships the finished Baseline tracker and its price API", async () => {
   assert.match(route, /SVP Sports/);
   assert.match(route, /Aforza Pro Shop/);
   assert.match(route, /The Sweet Spot/);
-  assert.match(route, /prod-card__img-link/);
   assert.match(monitor, /prod-card__img-link/);
   assert.match(ui, /Store directory · no reliable public grip feed/);
   assert.match(route, /used_targets/);
-  assert.match(route, /fetchWooCommerce/);
+  assert.match(monitor, /fetchWooCommerce/);
   assert.match(ui, /Used market/);
   assert.match(ui, /Kijiji Canada/);
   assert.match(ui, /eBay Canada/);

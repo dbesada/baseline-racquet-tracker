@@ -13,6 +13,8 @@ npm run dev
 
 Use `npm.cmd` instead of `npm` in PowerShell environments where script execution policy blocks npm's PowerShell shim.
 
+`npm run dev` serves the app and its API but does not check prices. Price checks run in the price monitor (`scripts/check-prices.mjs`), which the relay (`scripts/baseline-relay.mjs`) starts when it boots, every 3 hours, and when an admin presses Check prices now; the relay then merges the results into the dashboard. The relay only runs in the deployed container, so under `npm run dev` Check prices now fails: the API answers with a 501 error that says so.
+
 Useful checks:
 
 ```powershell

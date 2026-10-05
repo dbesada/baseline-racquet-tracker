@@ -3,15 +3,18 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 import { classify, classifyUsed, isAccessory, jsonLdOffer, parseAmazonPrice, productJsonLd } from "../app/lib/catalog-matching.js";
 
-test("the API and the price monitor share one copy of the matching rules", async () => {
+test("the price monitor is the only code that reads retailer pages", async () => {
   const [route, monitor] = await Promise.all([
     readFile(new URL("../app/api/tracker/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../scripts/check-prices.mjs", import.meta.url), "utf8"),
   ]);
-  for (const [name, source] of [["route.ts", route], ["check-prices.mjs", monitor]]) {
-    assert.match(source, /from "[./]+(?:app\/)?lib\/catalog-matching\.js"/, `${name} imports the shared module`);
-    assert.doesNotMatch(source, /\nfunction (?:classify|classifyUsed|productJsonLd|jsonLdOffer)\(/, `${name} has no private copy`);
-  }
+  assert.match(monitor, /from "[./]+(?:app\/)?lib\/catalog-matching\.js"/, "the monitor imports the shared matching rules");
+  assert.doesNotMatch(monitor, /\nfunction (?:classify|classifyUsed|productJsonLd|jsonLdOffer)\(/, "the monitor has no private copy");
+  // The API route used to keep a second set of retailer readers. Production
+  // never ran them (the relay runs the monitor instead) and the two copies
+  // drifted apart, so they were removed; keep it that way.
+  assert.doesNotMatch(route, /catalog-matching/, "the API route does not match retailer listings");
+  assert.doesNotMatch(route, /\bfetch\(/, "the API route makes no outbound requests");
 });
 
 test("a plus sign at the end of a title still matches the Plus model", () => {

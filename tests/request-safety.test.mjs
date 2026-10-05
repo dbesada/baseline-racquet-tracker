@@ -36,11 +36,12 @@ test("the tracker API validates PATCH bodies and model keys", async () => {
   assert.doesNotMatch(route, /\bin (?:modelNames|defaultTargets)\b/, "model keys are checked with isOwnKey, not `in`");
 });
 
-test("only one price check runs at a time and PATCH no longer changes the running check's grip size", async () => {
+test("the tracker API leaves price checks to the relay", async () => {
   const route = await readFile(new URL("../app/api/tracker/route.ts", import.meta.url), "utf8");
-  assert.match(route, /if \(checkRunning\) return Response\.json\([^)]*\{ status: 409 \}\)/);
-  assert.match(route, /finally \{\s*checkRunning = false;/);
-  assert.deepEqual(route.match(/activeGripSize = .*/g), ["activeGripSize = await getGripSize();"], "set only at the start of runCheck");
+  const post = route.slice(route.indexOf("export async function POST"), route.indexOf("export async function PATCH"));
+  assert.match(post, /^export async function POST\(request: Request\) \{\s*if \(isPublicPreview\(request\)\) return publicPreviewDenied\(\);/, "the public beta is refused first");
+  assert.match(post, /\{ status: 501 \}\);\s*\}\s*$/, "everyone else is told checks run through the relay");
+  assert.doesNotMatch(route, /\b(?:runCheck|checkRunning|activeGripSize)\b/, "no price-check state is left in the route");
 });
 
 test("the audit log rotates when it reaches its size cap", async (t) => {
