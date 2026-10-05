@@ -1,9 +1,10 @@
 import http from "node:http";
 import { createHash } from "node:crypto";
 import { spawn } from "node:child_process";
-import { appendFile, readFile, rename, writeFile } from "node:fs/promises";
+import { readFile, rename, writeFile } from "node:fs/promises";
 import { gzipSync } from "node:zlib";
 import { createAccessVerifier, isAdminRequest, parseLoginList } from "./access-control.mjs";
+import { createAuditLog } from "./audit-log.mjs";
 
 const upstream = `http://${process.env.BASELINE_UPSTREAM_HOST ?? "127.0.0.1"}:${process.env.BASELINE_UPSTREAM_PORT ?? "4001"}`;
 const upstreamUrl = new URL(upstream);
@@ -13,6 +14,7 @@ const analyticsFile = "/app/.data/baseline-analytics.json";
 const ebayDeletionTokenFile = process.env.EBAY_DELETION_TOKEN_FILE ?? "/app/.data/ebay-deletion-token";
 const ebayDeletionEndpoint = process.env.EBAY_DELETION_ENDPOINT
   ?? "https://nasbesada.tail0731b8.ts.net:8443/api/ebay/account-deletion";
+const ebayAudit = createAuditLog({ path: "/app/.data/ebay-callback-audit.log" });
 // Cloudflare Access verification. Both values come from the Access application
 // in the Cloudflare Zero Trust dashboard: the team domain (for example
 // "myteam.cloudflareaccess.com") and the application's Audience (AUD) tag.
@@ -489,10 +491,7 @@ async function handleAnalytics(req, res) {
 async function handleEbayAccountDeletion(req, res) {
   const url = new URL(req.url, ebayDeletionEndpoint);
   if (req.method === "HEAD") {
-    await appendFile(
-      "/app/.data/ebay-callback-audit.log",
-      `${new Date().toISOString()} HEAD readiness probe\n`,
-    ).catch(() => {});
+    await ebayAudit("HEAD readiness probe", { throttleKey: "head-probe" });
     res.writeHead(204, { "cache-control": "no-store" });
     res.end();
     return;
@@ -500,10 +499,7 @@ async function handleEbayAccountDeletion(req, res) {
   if (req.method === "GET") {
     const challengeCode = url.searchParams.get("challenge_code");
     if (!challengeCode) {
-      await appendFile(
-        "/app/.data/ebay-callback-audit.log",
-        `${new Date().toISOString()} GET readiness probe\n`,
-      ).catch(() => {});
+      await ebayAudit("GET readiness probe", { throttleKey: "get-probe" });
       const body = JSON.stringify({ status: "ready" });
       res.writeHead(200, {
         "content-type": "application/json; charset=utf-8",
@@ -513,10 +509,7 @@ async function handleEbayAccountDeletion(req, res) {
       res.end(body);
       return;
     }
-    await appendFile(
-      "/app/.data/ebay-callback-audit.log",
-      `${new Date().toISOString()} GET challenge received\n`,
-    ).catch(() => {});
+    await ebayAudit("GET challenge received");
     const verificationToken = (await readFile(ebayDeletionTokenFile, "utf8")).trim();
     const challengeResponse = createHash("sha256")
       .update(challengeCode)
