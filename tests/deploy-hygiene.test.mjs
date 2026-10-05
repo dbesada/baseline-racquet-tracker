@@ -59,3 +59,12 @@ test("the relay reads the Tailscale admin allowlist from the deployment", () => 
   assert.match(read("scripts/baseline-relay.mjs"), /BASELINE_TAILSCALE_ADMINS/);
   assert.match(read("deploy/truenas-compose.yml"), /BASELINE_TAILSCALE_ADMINS:/);
 });
+
+test("the image runs as the unprivileged node user", () => {
+  const dockerfile = read("Dockerfile");
+  assert.match(dockerfile, /^USER node$/m);
+  // Wrangler fails to start if it cannot write its working folder.
+  assert.match(dockerfile, /chown node:node [^\n]*dist\/server\/\.wrangler/);
+  // The release writes the settings backup as root; the relay must still read it.
+  assert.match(read("scripts/truenas-registry-release.mjs"), /\[persistentSettingsPath, \{ mode: 0o644 \}\]/);
+});

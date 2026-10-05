@@ -30,6 +30,8 @@ The relay (`scripts/baseline-relay.mjs`) decides who may change settings or star
 
 ## Releasing to TrueNAS
 
+The containers run as the unprivileged `node` user (uid 1000), so uid 1000 must own the data folders on the NAS: `/mnt/pool0/apps/baseline/direct-data` and `/mnt/pool0/apps/baseline/direct-wrangler`.
+
 The release scripts verify the TrueNAS certificate. Start Node with `NODE_EXTRA_CA_CERTS` pointing at the TrueNAS certificate file. If that is not possible, set `BASELINE_ALLOW_INSECURE_TLS=1` for a single run on a trusted network.
 
 ## Project map
