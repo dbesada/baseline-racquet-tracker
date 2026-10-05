@@ -59,3 +59,9 @@ test("the relay reads the Tailscale admin allowlist from the deployment", () => 
   assert.match(read("scripts/baseline-relay.mjs"), /BASELINE_TAILSCALE_ADMINS/);
   assert.match(read("deploy/truenas-compose.yml"), /BASELINE_TAILSCALE_ADMINS:/);
 });
+
+test("the running app does not mount the Docker socket", () => {
+  // The socket gives full control of Docker on the NAS. It was only used to
+  // set up the Tailscale routes, which the README now documents.
+  assert.doesNotMatch(read("deploy/truenas-compose.yml"), /docker\.sock/);
+});
