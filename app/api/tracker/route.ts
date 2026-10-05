@@ -1,6 +1,7 @@
 import { env } from "cloudflare:workers";
 import { defaultTargets, modelNames } from "../../lib/racquet-catalogue.js";
 import { isOwnKey, readJsonObject } from "../../lib/request-body.js";
+import { planSettingsRestore } from "../../lib/settings-restore.js";
 
 export const dynamic = "force-dynamic";
 
@@ -463,8 +464,9 @@ export async function POST(request: Request) {
 export async function PATCH(request: Request) {
   if (isPublicPreview(request)) return publicPreviewDenied();
   await ensureSchema();
-  const body = await readJsonObject(request) as { modelKey?: string; targetPrice?: number; market?: "new" | "used"; retailerKey?: string; enabled?: boolean; slot?: number; selectedModelKey?: string; featuredBrand?: FeaturedBrand; featuredSlot?: number; gripSize?: GripSize } | null;
+  const body = await readJsonObject(request) as { modelKey?: string; targetPrice?: number; market?: "new" | "used"; retailerKey?: string; enabled?: boolean; slot?: number; selectedModelKey?: string; featuredBrand?: FeaturedBrand; featuredSlot?: number; gripSize?: GripSize; restoreSettings?: unknown } | null;
   if (!body) return Response.json({ error: "Invalid request body" }, { status: 400 });
+  if (body.restoreSettings !== undefined) return restoreSettings(body.restoreSettings);
   if (body.gripSize) {
     if (!validGripSizes.has(body.gripSize)) return Response.json({ error: "Invalid grip size" }, { status: 400 });
     await db().prepare("INSERT INTO tracker_preferences (key, value) VALUES ('grip_size', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value")
@@ -507,5 +509,32 @@ export async function PATCH(request: Request) {
   const targetTable = body.market === "used" ? "used_targets" : "targets";
   await db().prepare(`UPDATE ${targetTable} SET target_price = ? WHERE model_key = ?`)
     .bind(Number(body.targetPrice), body.modelKey).run();
+  return getDashboard();
+}
+
+// Stores the relay's saved settings file in the database in one batch, so a
+// database created fresh (or one that missed a change) matches what the owner
+// saved. Values the API would refuse are skipped and keep their current value.
+async function restoreSettings(settings: unknown) {
+  const plan = planSettingsRestore(settings, {
+    gripSizes: validGripSizes as Set<string>,
+    retailerKeys: new Set(feeds.map((feed) => feed.key)),
+    targetKeys: new Set(Object.keys(defaultTargets)),
+    modelKeys: new Set(Object.keys(modelNames)),
+    shortlistSlotCount,
+    featuredBrands,
+    featuredSlotCount,
+    belongsToBrand: (modelKey: string, brand: string) => belongsToBrand(modelKey, brand as FeaturedBrand),
+  });
+  const database = db();
+  const statements = [
+    ...(plan.gripSize ? [database.prepare("INSERT INTO tracker_preferences (key, value) VALUES ('grip_size', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").bind(plan.gripSize)] : []),
+    ...plan.retailers.map(([key, enabled]) => database.prepare("UPDATE retailer_settings SET enabled = ? WHERE retailer_key = ?").bind(enabled ? 1 : 0, key)),
+    ...plan.targets.map(([modelKey, price]) => database.prepare("UPDATE targets SET target_price = ? WHERE model_key = ?").bind(price, modelKey)),
+    ...plan.usedTargets.map(([modelKey, price]) => database.prepare("UPDATE used_targets SET target_price = ? WHERE model_key = ?").bind(price, modelKey)),
+    ...(plan.modelOrder ?? []).map((modelKey, slot) => database.prepare("UPDATE shortlist_slots SET model_key = ? WHERE slot = ?").bind(modelKey, slot)),
+    ...plan.brandPicks.flatMap(([brand, picks]) => picks.map((modelKey, slot) => database.prepare("UPDATE brand_featured_slots SET model_key = ? WHERE brand = ? AND slot = ?").bind(modelKey, brand, slot))),
+  ];
+  if (statements.length) await database.batch(statements);
   return getDashboard();
 }

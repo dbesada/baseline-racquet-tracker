@@ -9,8 +9,8 @@ RUN npm_config_jobs=1 npm_config_maxsockets=1 npm ci --no-audit --no-fund --fore
 COPY . .
 # Run as the image's unprivileged "node" user (uid 1000). The app writes only
 # to these folders. On TrueNAS, .data and .wrangler are host folders that
-# uid 1000 must own; wrangler keeps its local D1 state and temporary files in
-# dist/server/.wrangler, inside the container.
+# uid 1000 must own (the D1 database is kept in .wrangler/state, so it survives
+# releases); wrangler also writes temporary files to dist/server/.wrangler.
 RUN mkdir -p .data .wrangler dist/server/.wrangler \
   && chown node:node .data .wrangler dist/server/.wrangler
 USER node

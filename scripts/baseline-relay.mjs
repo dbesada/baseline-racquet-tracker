@@ -430,6 +430,12 @@ async function handleTracker(req, res) {
     const body = Buffer.concat(chunks);
     let parsedBody = {};
     try { parsedBody = JSON.parse(body.toString("utf8")); } catch { /* Upstream returns the validation error. */ }
+    if (parsedBody?.restoreSettings !== undefined) {
+      // Only the relay itself restores the settings file, on startup.
+      res.writeHead(400, { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" });
+      res.end(JSON.stringify({ error: "Invalid request body" }));
+      return;
+    }
     const upstreamResponse = await fetch(`${upstream}${req.url}`, {
       method: "PATCH",
       headers: { ...requestHeadersForUpstream(req), "content-type": req.headers["content-type"] ?? "application/json" },
@@ -574,5 +580,34 @@ http.createServer((req, res) => {
   res.end();
 }).listen(Number(process.env.BASELINE_CALLBACK_PORT ?? "4002"), "0.0.0.0");
 
+// The API's database is created with defaults whenever its folder is new.
+// Store the saved settings in it on startup so the two agree; the UI takes a
+// minute or more to start, so keep trying until it answers.
+async function restoreDatabaseSettings() {
+  for (let attempt = 1; attempt <= 60; attempt += 1) {
+    const settings = await readPersistentSettings();
+    if (!settings) return;
+    try {
+      const response = await fetch(`${upstream}/api/tracker`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ restoreSettings: settings }),
+        signal: AbortSignal.timeout(90000),
+      });
+      if (response.ok) {
+        dashboardCache = null;
+        dashboardCachedAt = 0;
+        console.log("Restored the saved settings into the database");
+      } else {
+        console.warn(`Restoring the saved settings returned HTTP ${response.status}`);
+      }
+      return;
+    } catch { /* The UI is still starting. */ }
+    await new Promise((resolve) => setTimeout(resolve, 10000));
+  }
+  console.warn("Could not restore the saved settings into the database: the UI did not answer");
+}
+
+void restoreDatabaseSettings();
 runPriceCheck();
 setInterval(runPriceCheck, checkEveryMs).unref();
