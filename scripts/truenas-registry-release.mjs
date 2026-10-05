@@ -122,7 +122,8 @@ async function backupLiveSettings() {
       retailers: (dashboard.retailers ?? []).map(({ key, name, enabled }) => ({ key, name, enabled: Boolean(enabled) })),
     };
     const upload = new FormData();
-    upload.set("data", JSON.stringify({ method: "filesystem.put", params: [persistentSettingsPath] }));
+    // TrueNAS writes this as root; the relay runs as uid 1000 and must read it.
+    upload.set("data", JSON.stringify({ method: "filesystem.put", params: [persistentSettingsPath, { mode: 0o644 }] }));
     upload.set("file", new Blob([JSON.stringify(settings, null, 2)]), "baseline-settings.json");
     const uploadResponse = await fetch(`https://${truenasHost}/_upload/`, {
       method: "POST",

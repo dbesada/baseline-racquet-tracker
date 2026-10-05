@@ -65,3 +65,12 @@ test("the running app does not mount the Docker socket", () => {
   // set up the Tailscale routes, which the README now documents.
   assert.doesNotMatch(read("deploy/truenas-compose.yml"), /docker\.sock/);
 });
+
+test("the image runs as the unprivileged node user", () => {
+  const dockerfile = read("Dockerfile");
+  assert.match(dockerfile, /^USER node$/m);
+  // Wrangler fails to start if it cannot write its working folder.
+  assert.match(dockerfile, /chown node:node [^\n]*dist\/server\/\.wrangler/);
+  // The release writes the settings backup as root; the relay must still read it.
+  assert.match(read("scripts/truenas-registry-release.mjs"), /\[persistentSettingsPath, \{ mode: 0o644 \}\]/);
+});
