@@ -1845,7 +1845,7 @@ export function BaselineApp() {
               <span className="sale-store">{offer.store} · {offer.condition}</span>
               <strong>{offer.title}</strong>
               <span className="sale-prices"><b>{offerMoney(offer)}</b><i>{offer.gripSizes.join(", ")}{offer.currency === "USD" ? " · USD" : ""}</i></span>
-              <span className="arrow" aria-hidden="true">â†—</span>
+              <span className="arrow" aria-hidden="true">↗</span>
             </a>
           ))}
         </div>
