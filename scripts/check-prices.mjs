@@ -355,7 +355,9 @@ function extractRacquetSpecs(value, source, sourceUrl) {
   const gripSizes = text.match(/grip\s*size[^a-z0-9]{0,20}([glo]?\s*\d(?:\s*[-–,/]\s*[glo]?\s*\d){0,5})/i)?.[1]?.replace(/\s+/g, " ").trim();
   const color = text.match(/colou?r(?:\(s\))?[^a-z0-9]{0,20}([a-z][a-z /&.-]{2,55}?)(?=\s+(?:head\s*size|weight|balance|length|width|beam|grip|material|string|made\s*in|$))/i)?.[1]?.replace(/[.\s]+$/, "").trim();
   const madeIn = text.match(/made\s*in[^a-z]{0,12}([a-z][a-z .]{2,30}?)(?=\s+(?:item\s*code|product\s*code|sku|description|$))/i)?.[1]?.replace(/[.\s]+$/, "").trim();
-  const recommendedStrings = text.match(/recommended\s*strings?[^a-z0-9]{0,20}([a-z0-9™ +/&.,-]{3,120}?)(?=\s+(?:string(?:ing)?\s*pattern|(?:recommended\s*)?(?:stringing\s*)?tension|made\s*in|item\s*code|product\s*code|sku|$))/i)?.[1]?.trim();
+  // "Recommended String(s)" must be a whole label, not the start of
+  // "Recommended Stringing Tension" or "Recommended String Tension".
+  const recommendedStrings = text.match(/recommended\s*strings?\b(?![^a-z0-9]{0,20}tension\b)[^a-z0-9]{0,20}([a-z0-9™ +/&.,-]{3,120}?)(?=\s+(?:string(?:ing)?\s*pattern|(?:recommended\s*)?(?:stringing\s*)?tension|made\s*in|item\s*code|product\s*code|sku|$))/i)?.[1]?.trim();
   if (!head && !weight && !strungWeight && !pattern && !swingweight && !stiffness) return null;
   const balanceValue = balanceMatch?.[1];
   const balance = balanceValue ? `${Number(balanceValue) >= 100 ? (Number(balanceValue) / 10).toFixed(1) : Number(balanceValue).toFixed(1)} cm` : undefined;
@@ -386,6 +388,13 @@ function extractRacquetSpecs(value, source, sourceUrl) {
     source,
     sourceUrl,
   };
+}
+
+// Before the label fix above, "Recommended Stringing Tension" was saved as
+// recommended strings "ing" (or "Tension …"). Spec merges keep old fields that
+// a new read no longer finds, so saved specs need these values removed.
+function dropMisreadRecommendedStrings(specs) {
+  if (specs && /^(?:ing|tension)\b/i.test(String(specs.recommendedStrings ?? "").trim())) delete specs.recommendedStrings;
 }
 
 function manufacturerFor(modelKey) {
@@ -1502,6 +1511,7 @@ function mergeFreshWithFallback(fresh, stale) {
 }
 
 const previous = await readPrevious();
+for (const specs of [...Object.values(previous.racquetSpecs ?? {}), ...Object.values(previous.offers ?? {}).map((offer) => offer?.specs)]) dropMisreadRecommendedStrings(specs);
 const checkedAt = new Date().toISOString();
 let enabledNames = null;
 let configuredApifyToken = "";
@@ -1729,7 +1739,8 @@ for (const specs of Object.values(racquetSpecs)) {
   const stiffnessValue = Number.parseFloat(specs?.stiffness);
   if (specs?.stiffness && (!Number.isFinite(stiffnessValue) || stiffnessValue < 40 || stiffnessValue > 85)) delete specs.stiffness;
 }
-const manufacturerSpecAuditVersion = 5;
+// Bump when spec extraction changes so every manufacturer page is read again.
+const manufacturerSpecAuditVersion = 6;
 const manufacturerSpecCheckedAt = previous.manufacturerSpecAuditVersion === manufacturerSpecAuditVersion ? { ...(previous.manufacturerSpecCheckedAt ?? {}) } : {};
 const forceModelAudit = process.env.BASELINE_FORCE_MODEL_AUDIT === "1";
 const specFields = ["head", "weight", "strungWeight", "balance", "strungBalance", "swingweight", "pattern", "beam", "length", "stiffness", "composition", "tension", "productCode", "gripSizes", "color", "madeIn", "recommendedStrings", "imageUrl"];
