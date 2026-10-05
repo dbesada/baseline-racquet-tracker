@@ -1,6 +1,7 @@
 import { env } from "cloudflare:workers";
 import { classify, classifyUsed, isAccessory, parseAmazonPrice, decodeHtmlAttribute, productJsonLd, jsonLdOffer } from "../../lib/catalog-matching.js";
 import { defaultTargets, modelNames } from "../../lib/racquet-catalogue.js";
+import { isOwnKey, readJsonObject } from "../../lib/request-body.js";
 
 export const dynamic = "force-dynamic";
 
@@ -335,7 +336,7 @@ const defaultBrandPicks: Record<FeaturedBrand, string[]> = {
 };
 
 function belongsToBrand(modelKey: string, brand: FeaturedBrand) {
-  return modelNames[modelKey]?.startsWith(`${brand} `) ?? false;
+  return isOwnKey(modelNames, modelKey) && modelNames[modelKey].startsWith(`${brand} `);
 }
 
 function db() {
@@ -345,7 +346,11 @@ function db() {
 type GripSize = "L0" | "L1" | "L2" | "L3" | "L4" | "L5";
 const validGripSizes = new Set<GripSize>(["L0", "L1", "L2", "L3", "L4", "L5"]);
 const gripMeasurements: Record<GripSize, string> = { L0: "4", L1: "4 1/8", L2: "4 1/4", L3: "4 3/8", L4: "4 1/2", L5: "4 5/8" };
+// Set once at the start of each price check from the saved preference. Only
+// one check runs at a time (see `checkRunning`), so a check never sees the
+// grip size change part-way through.
 let activeGripSize: GripSize = "L3";
+let checkRunning = false;
 
 async function getGripSize(): Promise<GripSize> {
   const row = await db().prepare("SELECT value FROM tracker_preferences WHERE key = 'grip_size'").first<{ value: string }>();
@@ -963,25 +968,34 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   if (isPublicPreview(request)) return publicPreviewDenied();
   const url = new URL(request.url);
-  if (url.searchParams.get("action") === "check") return runCheck();
-  if (url.searchParams.get("action") === "models") return runCheck();
-  if (url.searchParams.get("action") === "model") {
-    const modelKey = url.searchParams.get("modelKey") ?? "";
-    if (!(modelKey in modelNames)) return Response.json({ error: "Unknown model" }, { status: 400 });
-    return runCheck();
+  const action = url.searchParams.get("action");
+  if (action === "model" && !isOwnKey(modelNames, url.searchParams.get("modelKey"))) {
+    return Response.json({ error: "Unknown model" }, { status: 400 });
   }
-  return Response.json({ error: "Unknown action" }, { status: 400 });
+  // In production the relay answers these actions itself and never forwards
+  // them here; this path serves `npm run dev`, where there is no relay. All
+  // three run the same full check.
+  if (action !== "check" && action !== "models" && action !== "model") {
+    return Response.json({ error: "Unknown action" }, { status: 400 });
+  }
+  if (checkRunning) return Response.json({ error: "A price check is already running" }, { status: 409 });
+  checkRunning = true;
+  try {
+    return await runCheck();
+  } finally {
+    checkRunning = false;
+  }
 }
 
 export async function PATCH(request: Request) {
   if (isPublicPreview(request)) return publicPreviewDenied();
   await ensureSchema();
-  const body = await request.json() as { modelKey?: string; targetPrice?: number; market?: "new" | "used"; retailerKey?: string; enabled?: boolean; slot?: number; selectedModelKey?: string; featuredBrand?: FeaturedBrand; featuredSlot?: number; gripSize?: GripSize };
+  const body = await readJsonObject(request) as { modelKey?: string; targetPrice?: number; market?: "new" | "used"; retailerKey?: string; enabled?: boolean; slot?: number; selectedModelKey?: string; featuredBrand?: FeaturedBrand; featuredSlot?: number; gripSize?: GripSize } | null;
+  if (!body) return Response.json({ error: "Invalid request body" }, { status: 400 });
   if (body.gripSize) {
     if (!validGripSizes.has(body.gripSize)) return Response.json({ error: "Invalid grip size" }, { status: 400 });
     await db().prepare("INSERT INTO tracker_preferences (key, value) VALUES ('grip_size', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value")
       .bind(body.gripSize).run();
-    activeGripSize = body.gripSize;
     return getDashboard();
   }
   if (body.retailerKey) {
@@ -993,7 +1007,7 @@ export async function PATCH(request: Request) {
     return getDashboard();
   }
   if (Number.isInteger(body.slot) && body.selectedModelKey) {
-    if (body.slot! < 0 || body.slot! >= shortlistSlotCount || !(body.selectedModelKey in modelNames)) {
+    if (body.slot! < 0 || body.slot! >= shortlistSlotCount || !isOwnKey(modelNames, body.selectedModelKey)) {
       return Response.json({ error: "Invalid shortlist frame" }, { status: 400 });
     }
     const duplicate = await db().prepare("SELECT slot FROM shortlist_slots WHERE model_key = ? AND slot <> ?")
@@ -1014,7 +1028,7 @@ export async function PATCH(request: Request) {
       .bind(body.selectedModelKey, body.featuredBrand, body.featuredSlot).run();
     return getDashboard();
   }
-  if (!body.modelKey || !(body.modelKey in defaultTargets) || !Number.isFinite(body.targetPrice) || Number(body.targetPrice) < 1) {
+  if (!body.modelKey || !isOwnKey(defaultTargets, body.modelKey) || !Number.isFinite(body.targetPrice) || Number(body.targetPrice) < 1) {
     return Response.json({ error: "Invalid target" }, { status: 400 });
   }
   const targetTable = body.market === "used" ? "used_targets" : "targets";

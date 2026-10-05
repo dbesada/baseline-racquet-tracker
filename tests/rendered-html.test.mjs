@@ -1,13 +1,15 @@
 import assert from "node:assert/strict";
-import { access, readFile } from "node:fs/promises";
+import { access, readdir, readFile } from "node:fs/promises";
 import test from "node:test";
 import { defaultTargets, modelNames } from "../app/lib/racquet-catalogue.js";
 
-// The main UI is split across the component and its data/helper modules.
-const uiFiles = ["BaselineApp.tsx", "baseline-catalogue.ts", "baseline-types.ts"];
-const readUiSource = async () => (await Promise.all(
-  uiFiles.map((file) => readFile(new URL(`../app/ui/${file}`, import.meta.url), "utf8")),
-)).join("\n");
+// The main UI is split across BaselineApp.tsx, one component file per tab or
+// dialog, and the data/helper modules, so read every TypeScript file in app/ui.
+const uiDirectory = new URL("../app/ui/", import.meta.url);
+const readUiSource = async () => {
+  const files = (await readdir(uiDirectory)).filter((file) => /\.tsx?$/.test(file)).sort();
+  return (await Promise.all(files.map((file) => readFile(new URL(file, uiDirectory), "utf8")))).join("\n");
+};
 
 test("ships the finished Baseline tracker and its price API", async () => {
   const [page, ui, coach, styles, route, layout, hosting, monitor, relay, release] = await Promise.all([
@@ -69,7 +71,7 @@ test("ships the finished Baseline tracker and its price API", async () => {
   assert.match(ui, /catalogueMetrics/);
   assert.match(ui, /Comparable unit-sales totals are not publicly reported/);
   assert.match(monitor, /stiffnessMatch/);
-  assert.match(monitor, /manufacturerSpecAuditVersion = 5/);
+  assert.match(monitor, /manufacturerSpecAuditVersion = 6/);
   assert.match(monitor, /BASELINE_FORCE_MODEL_AUDIT/);
   assert.match(relay, /action.*models/);
   assert.match(relay, /modelRefreshState/);
@@ -94,7 +96,7 @@ test("ships the finished Baseline tracker and its price API", async () => {
   assert.match(styles, /font-size: clamp\(18px/);
   assert.match(monitor, /officialImageUrl/);
   assert.match(ui, /isManufacturerSpec/);
-  assert.match(ui, /resolvedRacquetSpecs\[modelKey\][?][.]imageUrl/);
+  assert.match(ui, /modelImage\(modelKey, spec[?][.]imageUrl\)/);
   assert.match(ui, /alphabeticalBrandList/);
   assert.match(styles, /select option, select optgroup/);
   assert.match(styles, /font-size: \.875rem !important/);
@@ -119,7 +121,7 @@ test("ships the finished Baseline tracker and its price API", async () => {
   assert.match(monitor, /fetchShopifyCatalogs/);
   assert.match(monitor, /new Map\(catalogues[.]flat\(\)[.]map/);
   assert.match(monitor, /for \(let page = 1; page <= 4; page \+= 1\)/);
-  assert.match(ui, /resolvedRacquetSpecs\[modelKey\][.]stiffness/);
+  assert.match(ui, /spec[.]stiffness/);
   assert.match(route, /Sports Virtuoso/);
   assert.match(route, /Racquet Science/);
   assert.match(route, /TennisNetPro/);
@@ -177,7 +179,7 @@ test("ships the finished Baseline tracker and its price API", async () => {
   assert.match(route, /baseline-beta[.]besada[.]net/);
   assert.match(route, /This action is available in the protected Baseline admin app/);
   assert.match(ui, /LAST VERIFIED PRICE/);
-  assert.match(ui, /renderSourceHealth/);
+  assert.match(ui, /<SourceHealth data=\{data\} \/>/);
   assert.match(styles, /\.source-health/);
   assert.match(monitor, /resilientFetch/);
   assert.match(monitor, /settleInPool/);
@@ -202,7 +204,7 @@ test("ships the finished Baseline tracker and its price API", async () => {
   assert.match(ui, /When to restring/);
   assert.match(ui, /Advanced string lab/);
   assert.match(ui, /LIVE CANADIAN EXAMPLES/);
-  assert.match(ui, /stringGuideExamples/);
+  assert.match(ui, /<StringGuide examples=\{stringMarket[.]guideExamples\} \/>/);
   assert.match(ui, /Your Local ATP\/WTA Tour Stringer/);
   assert.match(ui, /gaostringinglab\.com/);
   assert.match(ui, /Special editions/);
@@ -215,10 +217,10 @@ test("ships the finished Baseline tracker and its price API", async () => {
   assert.match(ui, /\["all", \.\.\.brandList, "catalogue", "special", "strings", "balls", "accessories", "guide", "string-guide"\]/);
   assert.match(ui, /Tennis strings/);
   assert.match(ui, /Find the right feel, type, and gauge/);
-  assert.match(ui, /stringGroupsByType/);
+  assert.match(ui, /market[.]groupsByType[.]map/);
   assert.match(ui, /Construction type/);
   assert.match(ui, /All brands/);
-  assert.match(ui, /availableStringBrands/);
+  assert.match(ui, /market[.]availableBrands[.]map/);
   assert.match(ui, /All gauges/);
   assert.match(ui, /Package format/);
   assert.match(ui, /All formats/);
@@ -238,9 +240,9 @@ test("ships the finished Baseline tracker and its price API", async () => {
   assert.match(styles, /\.string-grid/);
   assert.match(ui, /Accessories/);
   assert.match(ui, /Everything around the frame, in one place/);
-  assert.match(ui, /accessoryGroupsByCategory/);
+  assert.match(ui, /market[.]groupsByCategory[.]map/);
   assert.match(ui, /All accessory types/);
-  assert.match(ui, /availableAccessoryBrands/);
+  assert.match(ui, /useAccessoryMarket/);
   assert.match(ui, /Biggest savings/);
   assert.match(monitor, /const accessoryFeeds =/);
   assert.match(monitor, /fetchAccessoryStore/);
@@ -250,7 +252,7 @@ test("ships the finished Baseline tracker and its price API", async () => {
   assert.match(styles, /\.accessory-market-summary/);
   assert.match(styles, /\.accessory-grid/);
   assert.match(ui, /specialGripLabels/);
-  assert.match(ui, /specialEditionGroups/);
+  assert.match(ui, /useSpecialEditions/);
   assert.match(ui, /specialEditionModelKey/);
   assert.match(ui, /UNIQUE RACQUETS/);
   assert.match(ui, /Compare \{group\.offers\.length\} retailer/);
@@ -262,7 +264,7 @@ test("ships the finished Baseline tracker and its price API", async () => {
   assert.match(relay, /content-encoding/);
   assert.match(relay, /optimized-v\\d\+/);
   assert.match(relay, /max-age=31536000, immutable/);
-  assert.match(ui, /activeBrand === "catalogue" && renderCatalogueControls/);
+  assert.match(ui, /activeBrand === "catalogue" && <CatalogueControls/);
   assert.match(ui, /const cataloguePageSize = 24/);
   assert.match(ui, /Show 24 more/);
   assert.doesNotMatch(ui, /CATALOGUE VIEW/);
@@ -506,7 +508,7 @@ test("recognizes the expanded current and legacy racquet catalogue", async () =>
     assert.match(ui, new RegExp(field));
     assert.match(monitor, new RegExp(field));
   }
-  assert.match(ui, /filteredSpecialEditionGroups/);
+  assert.match(ui, /filteredGroups[.]map\(\(group\) => <SpecialEditionCard/);
   assert.match(ui, /Most retailer choices/);
   assert.match(ui, /retailer-corrected/);
 });
@@ -544,6 +546,42 @@ test("extracts the full comparison specification set from retailer or manufactur
   assert.equal(metricTension.tension, "51–60 lbs");
   const flexForce = extractRacquetSpecs("Head Size 100 sq. in. Unstrung Weight 300 g. Composition HM Graphite / 2G-Namd Flex Force / SERVO FILTER. String Pattern 16 x 19. Recommended tension 50 - 60 lbs.", "Yonex official", "https://yonex.example/percept");
   assert.equal(flexForce.stiffness, undefined);
+});
+
+test("does not read a stringing-tension label as recommended strings", async () => {
+  const monitor = await readFile(new URL("../scripts/check-prices.mjs", import.meta.url), "utf8");
+  const start = monitor.indexOf("function plainText");
+  const end = monitor.indexOf("\nfunction manufacturerFor", start);
+  const { extractRacquetSpecs, repairRecommendedStrings } = Function(`${monitor.slice(start, end)}; return { extractRacquetSpecs, repairRecommendedStrings };`)();
+  const specs = (html) => extractRacquetSpecs(html, "Wilson official", "https://wilson.example/frame");
+
+  // Wilson's spec tables (and retailers copying them) say "Recommended
+  // Stringing Tension"; the old pattern read "Recommended String" + "ing".
+  const wilson = specs("<tr><th>Head Size</th><td>98 sq. in.</td></tr><tr><th>Unstrung Weight</th><td>305 g</td></tr><tr><th>String Pattern</th><td>16 x 19</td></tr><tr><th>Recommended Stringing Tension</th><td>50-60 lbs</td></tr><tr><th>Made In</th><td>Vietnam</td></tr>");
+  assert.equal(wilson.recommendedStrings, undefined);
+  assert.equal(wilson.tension, "50–60 lbs");
+  assert.equal(specs("Head Size 98 sq. in. Unstrung Weight 305 g Recommended String Tension 50 - 60 lbs Made In Vietnam").recommendedStrings, undefined);
+
+  // A real strings field is still read, including after the tension label.
+  const tensionFirst = specs("Head Size 100 sq. in. Unstrung Weight 300 g. Recommended Stringing Tension: 50 - 60 lbs. Recommended Strings: Wilson NXT Power. Made In: China.");
+  assert.match(tensionFirst.recommendedStrings, /^Wilson NXT Power/);
+  const yonex = extractRacquetSpecs("Head Size 98 sq. in. Unstrung Weight 305 g. Recommended String POLYTOUR PRO / REXIS SPEED String Pattern 16 x 19 Recommended Tension 45 - 60 lbs", "Yonex official", "https://yonex.example/ezone");
+  assert.equal(yonex.recommendedStrings, "POLYTOUR PRO / REXIS SPEED");
+
+  // A link around part of a name no longer splits it: Sports Virtuoso links
+  // "POLYTOUR PR" and leaves the "O" outside the link.
+  const linked = extractRacquetSpecs('<tr><th>Head Size</th><td>100 sq. in.</td></tr><tr><th>Unstrung Weight</th><td>250 g</td></tr><tr><th>Recommended String</th><td><br><a href="https://www.yonex.com/tennis/strings/ptgp115">POLYTOUR PR</a>O<br></td></tr><tr><th>String Pattern</th><td>16 x 19</td></tr>', "Sports Virtuoso", "https://retailer.example/vcore");
+  assert.equal(linked.recommendedStrings, "POLYTOUR PRO");
+  // ATR Sports lists Babolat's XALT as "XLAT".
+  const typo = extractRacquetSpecs("Head Size 100 sq. in. Unstrung Weight 285 g. Recommended String XLAT String Pattern 16 x 19", "ATR Sports", "https://retailer.example/evo");
+  assert.equal(typo.recommendedStrings, "XALT");
+
+  // Values saved before these fixes are repaired when the previous state loads.
+  const saved = { "defyer-100-v1": { recommendedStrings: "ing", tension: "50–60 lbs" }, "blade-v9": { recommendedStrings: "Tension 50-60 lbs" }, "evo-aero-gen2": { recommendedStrings: "XLAT" }, "ezone-98": { recommendedStrings: "POLYTOUR PRO / REXIS SPEED" } };
+  for (const value of Object.values(saved)) repairRecommendedStrings(value);
+  assert.deepEqual(saved, { "defyer-100-v1": { tension: "50–60 lbs" }, "blade-v9": {}, "evo-aero-gen2": { recommendedStrings: "XALT" }, "ezone-98": { recommendedStrings: "POLYTOUR PRO / REXIS SPEED" } });
+  repairRecommendedStrings(null);
+  assert.match(monitor, /const previous = await readPrevious\(\);\s*\n(?:\/\/.*\n)*for \(const specs of \[\.\.\.Object\.values\(previous\.racquetSpecs \?\? \{\}\), \.\.\.Object\.values\(previous\.offers \?\? \{\}\)\.map\(\(offer\) => offer\?\.specs\)\]\) repairRecommendedStrings\(specs\);/);
 });
 
 test("cross-checks official specifications with distinct retailer catalogues", async () => {
