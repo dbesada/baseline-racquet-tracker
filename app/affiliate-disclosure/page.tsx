@@ -7,7 +7,7 @@ export default function AffiliateDisclosurePage() {
       <article>
         <p className="eyebrow">AFFILIATE DISCLOSURE</p>
         <h1>How Baseline earns money.</h1>
-        <p className="legal-updated">Effective October 5, 2026</p>
+        <p className="legal-updated">Effective October 6, 2026</p>
 
         <h2>Affiliate links</h2>
         <p>Some retailer links on Baseline are affiliate links. If you follow one and buy something, the retailer or its affiliate network may pay Baseline a commission. You pay the same price either way. Baseline shows a short note near prices whenever affiliate links are in use.</p>
