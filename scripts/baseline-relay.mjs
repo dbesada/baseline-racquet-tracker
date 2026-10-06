@@ -4,6 +4,7 @@ import { spawn } from "node:child_process";
 import { readFile, rename, writeFile } from "node:fs/promises";
 import { gzipSync } from "node:zlib";
 import { createAccessVerifier, isAdminRequest, parseLoginList } from "./access-control.mjs";
+import { loadAffiliateLinks } from "./affiliate-links.mjs";
 import { createAuditLog } from "./audit-log.mjs";
 import { createOutboundRedirect, marketFrom } from "./outbound-redirect.mjs";
 import { settingsAfterChange, settingsSnapshot } from "./persistent-settings.mjs";
@@ -34,10 +35,14 @@ if (!accessVerifier) {
 // Serve, for example from the Android app. Empty means Tailscale is read-only.
 const tailscaleAdmins = parseLoginList(process.env.BASELINE_TAILSCALE_ADMINS);
 const publicPreviewByRequest = new WeakMap();
+const market = marketFrom(process.env.BASELINE_MARKET);
+// Only this market's affiliate file is read (config/affiliates/<market>.json).
+const affiliate = await loadAffiliateLinks({ market, warn: (message) => console.warn(message) });
 const { handleOutbound, rememberOffers } = createOutboundRedirect({
   readState: async () => JSON.parse(await readFile(stateFile, "utf8")),
   clickLogPath: clickLogFile,
-  market: marketFrom(process.env.BASELINE_MARKET),
+  market,
+  affiliate,
 });
 const checkEveryMs = 3 * 60 * 60 * 1000;
 let activeCheck = null;

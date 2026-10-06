@@ -113,10 +113,10 @@ test("a click while the monitor is rewriting the state file still redirects", as
   assert.equal(response.headers.location, "https://racquetguys.ca/products/pro-tour");
 });
 
-test("a click writes exactly one row with time, offer, retailer and market only", async () => {
+test("a click writes exactly one row with time, offer, retailer, market and network only", async () => {
   const { call, clicks } = await setup({ now: () => Date.parse("2026-10-05T12:00:00Z") });
   await call(goPath("used:ebay:v1|123|0"), { headers: { "user-agent": "Test/1.0", "x-forwarded-for": "203.0.113.9", "cf-connecting-ip": "203.0.113.9" } });
-  assert.deepEqual(await clicks(), [{ ts: "2026-10-05T12:00:00.000Z", offerId: "used:ebay:v1|123|0", retailer: "eBay Canada", market: "CA" }]);
+  assert.deepEqual(await clicks(), [{ ts: "2026-10-05T12:00:00.000Z", offerId: "used:ebay:v1|123|0", retailer: "eBay Canada", market: "CA", network: null }]);
   await call(goPath("used:ebay:v1|123|0"), { method: "HEAD" });
   assert.equal((await clicks()).length, 1, "HEAD requests are not clicks");
 });

@@ -48,6 +48,15 @@ The API's database is kept in `direct-wrangler/state`, so it survives releases. 
 
 Retailer links go through the relay's `/go/<offer id>` redirect, which sends the visitor to the URL stored for that offer and adds one line to `direct-data/baseline-clicks.jsonl`: time, offer ID, retailer and market (no IP address or user agent). Rows older than 90 days are removed, and the file stops growing at 5 MB. The market defaults to `CA`; a deployment for another market sets `BASELINE_MARKET` on the relay. The file is new and additive; deleting it only loses click counts.
 
+Affiliate links are set per retailer in `config/affiliates/ca.json` (and `us.json` for a U.S. deployment); the relay reads only the file for its own market, at startup, so a change needs a release. Both files ship with no retailers, so every click goes to the plain retailer link. An entry looks like this:
+
+```json
+{ "retailer": "Amazon.ca", "market": "CA", "network": "amazon-associates", "enabled": false,
+  "hosts": ["www.amazon.ca"], "addParams": { "tag": "your-tag-20" } }
+```
+
+`retailer` must match the store name shown on offers, and `hosts` lists the retailer link hostnames the entry applies to. Use `addParams` to add query parameters to the retailer's own link, or `linkTemplate` (an https link containing `{url}`, which becomes the encoded retailer link) for networks that send clicks through their own address. A disabled, invalid or non-matching entry falls back to the plain link; the relay logs a warning for an invalid one, and the tests reject it. Each click row records the entry's `network`, or `null` for a plain link. Keep entries disabled until the affiliate disclosure is on the site; a test enforces this until then.
+
 The release scripts verify the TrueNAS certificate. They connect to `truenas.besada.net`, which resolves to the NAS and is covered by its Let's Encrypt certificate for `*.besada.net`; connecting by IP address fails verification. Set `TRUENAS_HOST` to use another name. Only if the certificate cannot be verified, set `BASELINE_ALLOW_INSECURE_TLS=1` for a single run on a trusted network.
 
 ## Project map
