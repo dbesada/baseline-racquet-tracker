@@ -150,7 +150,13 @@ export type AnalyticsSummary = {
   daily: Array<{ date: string; pageViews: number; dealOpens: number }>;
   sections: Array<{ section: string; count: number }>;
   operations: { freshOffers: number; liveSources: number; totalSources: number; dropsLast24Hours: number; lastChecked: string | null };
+  retailerWeeks?: RetailerWeeks;
 };
+
+export type RetailerWeekRow = { retailer: string; weeks: number[]; total: number; affiliate: number };
+
+/** Clicks per retailer per week (Monday start, Toronto time), newest week first. */
+export type RetailerWeeks = { weeks: string[]; retailers: RetailerWeekRow[]; other: RetailerWeekRow | null; totalClicks: number };
 
 export type UsedSort = "watchlist" | "price-asc" | "listings-desc" | "name-asc";
 

@@ -6,6 +6,7 @@ import { gzipSync } from "node:zlib";
 import { createAccessVerifier, isAdminRequest, parseLoginList } from "./access-control.mjs";
 import { loadAffiliateLinks } from "./affiliate-links.mjs";
 import { createAuditLog } from "./audit-log.mjs";
+import { readClickRows, weeklyRetailerClicks } from "./click-report.mjs";
 import { createOutboundRedirect, marketFrom } from "./outbound-redirect.mjs";
 import { settingsAfterChange, settingsSnapshot } from "./persistent-settings.mjs";
 
@@ -501,8 +502,9 @@ async function handleAnalytics(req, res) {
     res.end();
     return;
   }
-  const [analytics, dashboard] = await Promise.all([readAnalytics(), dashboardWithLivePrices()]);
-  sendJson(req, res, summarizeAnalytics(analytics, dashboard));
+  const [analytics, dashboard, clicks] = await Promise.all([readAnalytics(), dashboardWithLivePrices(), readClickRows(clickLogFile)]);
+  // Admin only: public preview requests returned above.
+  sendJson(req, res, { ...summarizeAnalytics(analytics, dashboard), retailerWeeks: weeklyRetailerClicks(clicks) });
 }
 
 async function handleEbayAccountDeletion(req, res) {
