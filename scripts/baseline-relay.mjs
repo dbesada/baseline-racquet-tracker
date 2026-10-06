@@ -5,6 +5,7 @@ import { readFile, rename, writeFile } from "node:fs/promises";
 import { gzipSync } from "node:zlib";
 import { createAccessVerifier, isAdminRequest, parseLoginList } from "./access-control.mjs";
 import { createAuditLog } from "./audit-log.mjs";
+import { createOutboundRedirect, marketFrom } from "./outbound-redirect.mjs";
 import { settingsAfterChange, settingsSnapshot } from "./persistent-settings.mjs";
 
 const upstream = `http://${process.env.BASELINE_UPSTREAM_HOST ?? "127.0.0.1"}:${process.env.BASELINE_UPSTREAM_PORT ?? "4001"}`;
@@ -12,6 +13,7 @@ const upstreamUrl = new URL(upstream);
 const stateFile = "/app/.data/baseline-monitor.json";
 const settingsFile = "/app/.data/baseline-settings.json";
 const analyticsFile = "/app/.data/baseline-analytics.json";
+const clickLogFile = "/app/.data/baseline-clicks.jsonl";
 const ebayDeletionTokenFile = process.env.EBAY_DELETION_TOKEN_FILE ?? "/app/.data/ebay-deletion-token";
 const ebayDeletionEndpoint = process.env.EBAY_DELETION_ENDPOINT
   ?? "https://nasbesada.tail0731b8.ts.net:8443/api/ebay/account-deletion";
@@ -32,6 +34,11 @@ if (!accessVerifier) {
 // Serve, for example from the Android app. Empty means Tailscale is read-only.
 const tailscaleAdmins = parseLoginList(process.env.BASELINE_TAILSCALE_ADMINS);
 const publicPreviewByRequest = new WeakMap();
+const { handleOutbound, rememberOffers } = createOutboundRedirect({
+  readState: async () => JSON.parse(await readFile(stateFile, "utf8")),
+  clickLogPath: clickLogFile,
+  market: marketFrom(process.env.BASELINE_MARKET),
+});
 const checkEveryMs = 3 * 60 * 60 * 1000;
 let activeCheck = null;
 let dashboardCache = null;
@@ -239,6 +246,8 @@ async function dashboardWithLivePrices() {
   }
   try {
     const state = JSON.parse(await readFile(stateFile, "utf8"));
+    // Every offer a visitor can see stays reachable through /go/ for a while.
+    rememberOffers(state);
     const cached = Object.values(state.offers ?? {});
     const offers = cached.map((offer) => ({
       id: offer.id,
@@ -570,6 +579,10 @@ http.createServer(async (req, res) => {
   }
   if (req.url?.startsWith("/api/ebay/account-deletion")) {
     handleEbayAccountDeletion(req, res).catch(() => { res.writeHead(500); res.end(); });
+    return;
+  }
+  if (req.url?.startsWith("/go/")) {
+    handleOutbound(req, res).catch(() => { res.writeHead(500); res.end(); });
     return;
   }
   forward(req, res);

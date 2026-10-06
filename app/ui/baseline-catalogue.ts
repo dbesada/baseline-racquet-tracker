@@ -632,6 +632,14 @@ export const money = new Intl.NumberFormat("en-CA", { style: "currency", currenc
 
 export const usdMoney = new Intl.NumberFormat("en-CA", { style: "currency", currency: "USD", maximumFractionDigits: 2 });
 
+// Retailer links go through the relay's /go/<offer id> redirect, which looks
+// the destination up server-side and counts the click.
+export function outboundHref(offerId: string) {
+  return `/go/${encodeURIComponent(offerId)}`;
+}
+
+export const outboundRel = "sponsored nofollow noreferrer";
+
 export function offerMoney(offer: Offer) {
   return (offer.currency === "USD" ? usdMoney : money).format(offer.currentPrice ?? 0);
 }

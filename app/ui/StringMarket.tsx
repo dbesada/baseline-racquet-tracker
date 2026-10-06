@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import type { StringFormatFilter, StringGroup, StringOffer, StringTypeFilter } from "./baseline-types";
-import { canonicalStringBrand, freshnessRank, money, relativeTime, stringFamilyKey, stringFormatOrder, stringGaugeOrder, stringPageSize, stringTypeOrder } from "./baseline-catalogue";
+import { canonicalStringBrand, freshnessRank, money, outboundHref, outboundRel, relativeTime, stringFamilyKey, stringFormatOrder, stringGaugeOrder, stringPageSize, stringTypeOrder } from "./baseline-catalogue";
 
 // Filter state lives in the parent (through this hook) so the choices survive
 // switching to another tab and back.
@@ -173,7 +173,7 @@ function StringCard({ group }: { group: StringGroup }) {
         <summary>Compare {group.offers.length} {group.offers.length === 1 ? "offer" : "offers"}</summary>
         <div>
           {group.offers.map((retailerOffer) => (
-            <a href={retailerOffer.url} target="_blank" rel="noreferrer" key={retailerOffer.id}>
+            <a href={outboundHref(retailerOffer.id)} target="_blank" rel={outboundRel} key={retailerOffer.id}>
               <span><strong>{retailerOffer.store}</strong><small>{retailerOffer.gauges.join(" · ")} · {retailerOffer.format}{retailerOffer.sourceState === "stale" ? ` · last verified ${relativeTime(retailerOffer.lastChecked)}` : ""}</small></span>
               <b>{money.format(retailerOffer.currentPrice ?? 0)}</b>
               <i aria-hidden="true">↗</i>

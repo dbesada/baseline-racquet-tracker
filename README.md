@@ -46,6 +46,8 @@ The containers run as the unprivileged `node` user (uid 1000), so uid 1000 must 
 
 The API's database is kept in `direct-wrangler/state`, so it survives releases. The relay also keeps a copy of the settings in `direct-data/baseline-settings.json` and writes it into the database each time it starts, so a new or reset database gets the saved settings back.
 
+Retailer links go through the relay's `/go/<offer id>` redirect, which sends the visitor to the URL stored for that offer and adds one line to `direct-data/baseline-clicks.jsonl`: time, offer ID, retailer and market (no IP address or user agent). Rows older than 90 days are removed, and the file stops growing at 5 MB. The market defaults to `CA`; a deployment for another market sets `BASELINE_MARKET` on the relay. The file is new and additive; deleting it only loses click counts.
+
 The release scripts verify the TrueNAS certificate. They connect to `truenas.besada.net`, which resolves to the NAS and is covered by its Let's Encrypt certificate for `*.besada.net`; connecting by IP address fails verification. Set `TRUENAS_HOST` to use another name. Only if the certificate cannot be verified, set `BASELINE_ALLOW_INSECURE_TLS=1` for a single run on a trusted network.
 
 ## Project map

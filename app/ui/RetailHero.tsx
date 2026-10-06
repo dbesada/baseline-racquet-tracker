@@ -1,7 +1,7 @@
 "use client";
 
 import type { Dashboard, OpportunityMode, RacquetSpec } from "./baseline-types";
-import { money, relativeTime } from "./baseline-catalogue";
+import { money, outboundHref, outboundRel, relativeTime } from "./baseline-catalogue";
 import type { Opportunity } from "./dashboard-insights";
 import { PatternBadge } from "./racquet-visuals";
 
@@ -59,7 +59,7 @@ export function RetailHero({ data, loading, checking, error, opportunities, oppo
                 && <span>{Math.round((1 - selected.offer.currentPrice / selected.offer.compareAtPrice) * 100)}% off retail</span>}
             </div>
             <div className="opportunity-actions">
-              <a className="opportunity-link" href={selected.offer.url} target="_blank" rel="noreferrer">View deal <span aria-hidden="true">↗</span></a>
+              <a className="opportunity-link" href={outboundHref(selected.offer.id)} target="_blank" rel={outboundRel}>View deal <span aria-hidden="true">↗</span></a>
               <button className="opportunity-compare" onClick={() => onShowRetailers(selected.offer.modelKey)}>All retailers</button>
             </div>
           </> : <p className="opportunity-empty">{loading ? "Finding today’s best opportunity…" : "No verified in-stock opportunity yet."}</p>}

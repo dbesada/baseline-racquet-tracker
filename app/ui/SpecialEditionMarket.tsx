@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import type { Offer, RacquetSpec, SpecialAvailabilityFilter, SpecialEditionGroup, SpecialGripFilter, SpecialSort } from "./baseline-types";
-import { freshnessRank, gripOptions, money, preferredSpecialTitle, relativeTime, specialEditionFamily, specialEditionGroupLabel, specialEditionModelKey, specialEditionName, specialGripLabels, specialOfferBrand } from "./baseline-catalogue";
+import { freshnessRank, gripOptions, money, outboundHref, outboundRel, preferredSpecialTitle, relativeTime, specialEditionFamily, specialEditionGroupLabel, specialEditionModelKey, specialEditionName, specialGripLabels, specialOfferBrand } from "./baseline-catalogue";
 import { PatternBadge, RacquetImage } from "./racquet-visuals";
 
 // Filter state lives in the parent (through this hook) so the choices survive
@@ -136,7 +136,7 @@ function SpecialEditionCard({ group, spec, onPreviewImage }: { group: SpecialEdi
         <summary>Compare {group.offers.length} retailer {group.offers.length === 1 ? "offer" : "offers"}</summary>
         <div className="special-retailer-list">
           {group.offers.map((retailerOffer) => (
-            <a href={retailerOffer.url} target="_blank" rel="noreferrer" key={`${group.key}-${retailerOffer.id}`}>
+            <a href={outboundHref(retailerOffer.id)} target="_blank" rel={outboundRel} key={`${group.key}-${retailerOffer.id}`}>
               <span><strong>{retailerOffer.store}</strong><small>{specialGripLabels(retailerOffer.gripSizes).join(" · ")}{retailerOffer.sourceState === "stale" ? ` · last verified ${relativeTime(retailerOffer.lastChecked)}` : ""}</small></span>
               <b>{money.format(retailerOffer.currentPrice ?? 0)}</b>
               <span className="arrow" aria-hidden="true">↗</span>
