@@ -50,6 +50,16 @@ test("release scripts connect by a name the NAS certificate covers", () => {
   }
 });
 
+test("every image in the TrueNAS deployment has an exact version", () => {
+  const images = [...read("deploy/truenas-compose.yml").matchAll(/^\s*image:\s*(\S+)/gm)].map((match) => match[1]);
+  assert.ok(images.length >= 3);
+  // __IMAGE__ is replaced with dbesada/baseline-racquet-tracker:<version> at release.
+  assert.match(read("scripts/truenas-registry-release.mjs"), /const image = `dbesada\/baseline-racquet-tracker:\$\{version\}`/);
+  for (const image of images.filter((image) => image !== "__IMAGE__")) {
+    assert.doesNotMatch(image, /:latest$|^[^:]+$/, `${image} must name a version`);
+  }
+});
+
 test("the registry password is passed in a private file, never in the app config", () => {
   const source = read("scripts/truenas-registry-release.mjs");
   assert.doesNotMatch(source, /REGISTRY_PASS/, "no REGISTRY_PASS variable in the generated compose");
