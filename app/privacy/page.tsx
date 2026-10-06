@@ -7,7 +7,7 @@ export default function PrivacyPage() {
       <article>
         <p className="eyebrow">PRIVACY</p>
         <h1>Privacy at Baseline.</h1>
-        <p className="legal-updated">Effective October 5, 2026</p>
+        <p className="legal-updated">Effective October 6, 2026</p>
 
         <h2>What Baseline stores</h2>
         <p>Baseline’s public beta does not require an account. Your grip preference, six-frame watchlist, target prices, completed Baseline Coach fit, and browser-notification preference are stored locally on your device. The protected Baseline admin service stores its own operational retailer settings and scheduled-monitoring preferences separately.</p>
