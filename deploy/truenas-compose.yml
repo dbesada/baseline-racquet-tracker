@@ -51,9 +51,10 @@ services:
       start_period: 60s
 
   baseline_tunnel:
-    # Pin an exact version here once you have chosen one. "missing" stops a
-    # restart from silently pulling a new release.
-    image: cloudflare/cloudflared:latest
+    # Pinned so a release never changes the tunnel by accident. 2026.9.3 is
+    # the build that ran as "latest" until October 2026. To upgrade, change
+    # the tag here and release.
+    image: cloudflare/cloudflared:2026.9.3
     pull_policy: missing
     network_mode: host
     restart: unless-stopped
