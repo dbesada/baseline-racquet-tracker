@@ -52,11 +52,17 @@ async function writePersistentSettings(settings) {
   await rename(temporary, settingsFile);
 }
 
+// The API only lists targets for models in the catalogue. A saved price for a
+// model that has since been removed must not bring that model back.
+function savedPricesForKnownModels(current, saved) {
+  return Object.fromEntries(Object.entries(saved).filter(([modelKey]) => Object.hasOwn(current ?? {}, modelKey)));
+}
+
 function applyPersistentSettings(dashboard, settings) {
   if (!settings) return dashboard;
   if (/^L[0-5]$/.test(settings.gripSize ?? "")) dashboard.gripSize = settings.gripSize;
-  if (settings.targets) dashboard.targets = { ...(dashboard.targets ?? {}), ...settings.targets };
-  if (settings.usedTargets) dashboard.usedTargets = { ...(dashboard.usedTargets ?? {}), ...settings.usedTargets };
+  if (settings.targets) dashboard.targets = { ...(dashboard.targets ?? {}), ...savedPricesForKnownModels(dashboard.targets, settings.targets) };
+  if (settings.usedTargets) dashboard.usedTargets = { ...(dashboard.usedTargets ?? {}), ...savedPricesForKnownModels(dashboard.usedTargets, settings.usedTargets) };
   if (Array.isArray(settings.modelOrder) && settings.modelOrder.length) dashboard.modelOrder = settings.modelOrder;
   if (settings.brandPicks && typeof settings.brandPicks === "object") {
     dashboard.brandPicks = { ...(dashboard.brandPicks ?? {}), ...settings.brandPicks };
