@@ -216,6 +216,10 @@ h1 em { font-family: Georgia, 'Times New Roman', serif; font-weight: 400; color:
 .section-heading .eyebrow { margin-bottom: 12px; }
 h2 { margin: 0; font-size: clamp(2rem, 3.5vw, 3.6rem); letter-spacing: -.055em; line-height: 1; }
 .legend { font-size: .73rem; color: var(--muted); display: flex; align-items: center; gap: 8px; }
+.affiliate-note { margin: 10px 0 0; font-size: .68rem; line-height: 1.5; color: inherit; opacity: .72; }
+.section-heading + .affiliate-note { margin: -24px 0 24px; }
+.hero-copy > .affiliate-note { margin-top: 18px; max-width: 34rem; }
+.affiliate-note a, .footer-disclosure { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
 .deal-dot { width: 8px; height: 8px; border-radius: 2px; background: var(--lime); border: 1px solid var(--forest); margin-left: 12px; }
 .special-dot { width: 8px; height: 8px; border-radius: 50%; background: #c98845; box-shadow: 0 0 0 4px rgba(201,136,69,.14); margin-left: 12px; }
 .used-dot { width: 8px; height: 8px; border-radius: 50%; background: #c98845; box-shadow: 0 0 0 4px rgba(201,136,69,.14); margin-left: 12px; }

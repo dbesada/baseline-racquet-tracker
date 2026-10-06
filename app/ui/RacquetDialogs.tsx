@@ -1,6 +1,8 @@
 "use client";
 
 import Image from "next/image";
+import { hasAffiliateLinks } from "./affiliate-disclosure";
+import { AffiliateNote } from "./AffiliateNote";
 import type { Dashboard, Offer, RacquetSpec } from "./baseline-types";
 import { maxCompareFrames, modelBrand, modelImage, money, outboundHref, outboundRel, patternPresentation, relativeTime, standardizedSpecDisplay, validationPresentation } from "./baseline-catalogue";
 import { PatternBadge, RacquetImage } from "./racquet-visuals";
@@ -47,7 +49,7 @@ export function RetailerDialog({ modelKey, data, offers, spec, onPreviewImage, o
         <div className="retailer-modal-head">
           <div className="retailer-modal-identity">
             <RacquetImage modelKey={modelKey} spec={spec} className="retailer-modal-thumb" width={72} height={98} alt={`${modelName} racquet`} onPreview={onPreviewImage} />
-             <div><span>{modelBrand(modelKey)} · {data?.gripSize ?? "L3"}</span><h2 id="retailer-modal-title">{modelName}</h2><PatternBadge pattern={spec?.pattern} /><p>{offers.length} verified {offers.length === 1 ? "retailer" : "retailers"}, ranked by price</p></div>
+             <div><span>{modelBrand(modelKey)} · {data?.gripSize ?? "L3"}</span><h2 id="retailer-modal-title">{modelName}</h2><PatternBadge pattern={spec?.pattern} /><p>{offers.length} verified {offers.length === 1 ? "retailer" : "retailers"}, ranked by price</p><AffiliateNote show={hasAffiliateLinks(data)} /></div>
           </div>
           <button className="retailer-modal-close" onClick={onClose} aria-label="Close retailer comparison">×</button>
         </div>

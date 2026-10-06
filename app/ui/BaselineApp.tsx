@@ -17,6 +17,8 @@ import {
   uniqueRetailerOffers,
 } from "./baseline-catalogue";
 import { AccessoryMarket, useAccessoryMarket } from "./AccessoryMarket";
+import { affiliateDisclosurePath, hasAffiliateLinks } from "./affiliate-disclosure";
+import { AffiliateNote } from "./AffiliateNote";
 import { AnalyticsPanel } from "./AnalyticsPanel";
 import { BallMarket, useBallMarket } from "./BallMarket";
 import { catalogueMetrics as computeCatalogueMetrics, coachModels as computeCoachModels, marketplaceHealth as computeMarketplaceHealth, opportunityChoices as computeOpportunityChoices, resolveRacquetSpecs } from "./dashboard-insights";
@@ -420,6 +422,7 @@ export function BaselineApp() {
     onPreviewImage: setImagePreviewKey,
   };
   const racquetBrandActive = activeBrand === "catalogue" || brandList.includes(activeBrand as Exclude<BrandKey, "all">);
+  const affiliateLinksOn = hasAffiliateLinks(data);
 
   return (
     <main>
@@ -509,6 +512,7 @@ export function BaselineApp() {
           </div>
           <div className="legend">{browseLegends[activeBrand] ?? <><span className="deal-dot" /> Below target <span className="stock-dot" /> In stock</>}</div>
         </div>
+        <AffiliateNote show={affiliateLinksOn && activeBrand !== "guide"} />
 
         {activeBrand === "guide" ? <RacquetGuide />
           : activeBrand === "string-guide" ? <StringGuide examples={stringMarket.guideExamples} />
@@ -592,11 +596,12 @@ export function BaselineApp() {
         raised={activeMarket === "retail" && compareKeys.length > 0}
         onCompare={compareCoachPicks}
         onOpen={() => trackAnalytics("coach_open")}
+        affiliateLinksOn={affiliateLinksOn}
       />
 
       <footer>
         <a className="brand footer-brand" href={activeMarket === "retail" ? "#top" : "#used-top"}><span className="brand-mark"><i /><i /><i /></span> BASELINE</a>
-        <p>{activeMarket === "retail" ? "Prices can change between checks. Shipping and tax are confirmed at the retailer." : "Used listings can change quickly. Inspect the frame and use buyer-protected payment."}</p>
+        <p>{activeMarket === "retail" ? "Prices can change between checks. Shipping and tax are confirmed at the retailer." : "Used listings can change quickly. Inspect the frame and use buyer-protected payment."}{affiliateLinksOn && <> <a className="footer-disclosure" href={affiliateDisclosurePath}>Affiliate disclosure</a></>}</p>
         <span>CAD · CANADA</span>
       </footer>
     </main>

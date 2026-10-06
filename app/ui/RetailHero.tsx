@@ -1,5 +1,7 @@
 "use client";
 
+import { hasAffiliateLinks } from "./affiliate-disclosure";
+import { AffiliateNote } from "./AffiliateNote";
 import type { Dashboard, OpportunityMode, RacquetSpec } from "./baseline-types";
 import { money, outboundHref, outboundRel, relativeTime } from "./baseline-catalogue";
 import type { Opportunity } from "./dashboard-insights";
@@ -31,6 +33,7 @@ export function RetailHero({ data, loading, checking, error, opportunities, oppo
           </button>}
           <span className="last-check">Last checked<br /><strong>{relativeTime(data?.lastCheck?.checkedAt)}</strong></span>
         </div>
+        <AffiliateNote show={hasAffiliateLinks(data)} />
         {error && <p className="error" role="alert">{error}</p>}
       </div>
       <div className="court-card opportunity-court" aria-label="Best opportunity right now">

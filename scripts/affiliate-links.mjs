@@ -89,11 +89,14 @@ export function affiliateUrl(entry, destination) {
 }
 
 export function createAffiliateLinks(entries) {
-  return function affiliate(offer, destination) {
+  function affiliate(offer, destination) {
     const entry = entries.get(offer?.store);
     const url = entry?.enabled ? affiliateUrl(entry, destination) : null;
     return url ? { url, network: entry.network } : { url: destination, network: null };
-  };
+  }
+  // The site shows its affiliate disclosure while this list is not empty.
+  affiliate.retailers = [...entries.values()].filter((entry) => entry.enabled).map((entry) => entry.retailer);
+  return affiliate;
 }
 
 // Reads this market's file. A missing or invalid file means plain links only.

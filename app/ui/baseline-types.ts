@@ -66,6 +66,8 @@ export type BallOffer = {
 
 export type Dashboard = {
   publicPreview?: boolean;
+  /** Retailers whose links currently earn a commission (set by the relay). */
+  affiliateRetailers?: string[];
   offers: Offer[];
   saleOffers: Offer[];
   specialOffers?: Offer[];
