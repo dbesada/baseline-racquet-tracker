@@ -46,7 +46,7 @@ The containers run as the unprivileged `node` user (uid 1000), so uid 1000 must 
 
 The API's database is kept in `direct-wrangler/state`, so it survives releases. The relay also keeps a copy of the settings in `direct-data/baseline-settings.json` and writes it into the database each time it starts, so a new or reset database gets the saved settings back.
 
-The release scripts verify the TrueNAS certificate. Start Node with `NODE_EXTRA_CA_CERTS` pointing at the TrueNAS certificate file. If that is not possible, set `BASELINE_ALLOW_INSECURE_TLS=1` for a single run on a trusted network.
+The release scripts verify the TrueNAS certificate. They connect to `truenas.besada.net`, which resolves to the NAS and is covered by its Let's Encrypt certificate for `*.besada.net`; connecting by IP address fails verification. Set `TRUENAS_HOST` to use another name. Only if the certificate cannot be verified, set `BASELINE_ALLOW_INSECURE_TLS=1` for a single run on a trusted network.
 
 ## Project map
 

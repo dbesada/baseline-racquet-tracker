@@ -1,14 +1,13 @@
 import fs from "node:fs";
 
-// TrueNAS ships a self-signed certificate. Trust it explicitly by starting Node
-// with NODE_EXTRA_CA_CERTS pointing at that certificate file, instead of turning
-// verification off. As a temporary escape hatch on a trusted LAN, set
-// BASELINE_ALLOW_INSECURE_TLS=1 to restore the old behaviour for one run.
+// TrueNAS serves a Let's Encrypt certificate for *.besada.net, so connecting by
+// that name (not the LAN IP) verifies normally. As an escape hatch on a trusted
+// LAN, BASELINE_ALLOW_INSECURE_TLS=1 skips certificate checks for one run.
 if (process.env.BASELINE_ALLOW_INSECURE_TLS === "1") {
   console.warn("TLS certificate verification is DISABLED for this run (BASELINE_ALLOW_INSECURE_TLS=1).");
   process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
 }
-const truenasHost = process.env.TRUENAS_HOST ?? "192.168.50.230";
+const truenasHost = process.env.TRUENAS_HOST ?? "truenas.besada.net";
 const truenasApiKeyFile = process.env.TRUENAS_API_KEY_FILE ?? "C:/AI/.codex/truenas-api-key.txt";
 
 const token = process.env.BASELINE_CLOUDFLARE_TUNNEL_TOKEN?.trim();
