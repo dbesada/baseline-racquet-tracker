@@ -43,6 +43,13 @@ test("the relay no longer trusts client-supplied host forwarding for admin", () 
   assert.match(relay, /isAdminRequest/);
 });
 
+test("release scripts connect by a name the NAS certificate covers", () => {
+  // The certificate is for *.besada.net; the LAN IP fails verification.
+  for (const file of ["scripts/truenas-registry-release.mjs", "scripts/truenas-sync-cloudflare-token.mjs"]) {
+    assert.match(read(file), /process\.env\.TRUENAS_HOST \?\? "truenas\.besada\.net"/, file);
+  }
+});
+
 test("the registry password is passed in a private file, never in the app config", () => {
   const source = read("scripts/truenas-registry-release.mjs");
   assert.doesNotMatch(source, /REGISTRY_PASS/, "no REGISTRY_PASS variable in the generated compose");
