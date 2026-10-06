@@ -2,6 +2,10 @@ import type { Metadata, Viewport } from "next";
 import { headers } from "next/headers";
 import "./globals.css";
 
+// Public ownership code from Impact's "Add Website" step. Not a secret: Impact
+// reads it from the page to confirm the site is ours.
+const impactSiteVerification = "e0b3cfa6-43f7-4c32-b222-5e440c3a14d2";
+
 export async function generateMetadata(): Promise<Metadata> {
   const requestHeaders = await headers();
   const host = requestHeaders.get("x-forwarded-host") ?? requestHeaders.get("host") ?? "localhost:3000";
@@ -19,6 +23,8 @@ export async function generateMetadata(): Promise<Metadata> {
       apple: "/apple-touch-icon.png",
     },
     manifest: "/manifest.webmanifest",
+    // Impact (Sport Chek affiliate programme) site-ownership check.
+    other: { "impact-site-verification": impactSiteVerification },
     appleWebApp: { capable: true, statusBarStyle: "black-translucent", title: "Baseline" },
     openGraph: {
       title: "Baseline — Racquet prices, watched.",
@@ -53,7 +59,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en-CA">
-      <body>{children}</body>
+      <body>
+        {children}
+        {/* Impact's "edit content" check looks for this exact text in the page. */}
+        <p hidden>{`Impact-Site-Verification: ${impactSiteVerification}`}</p>
+      </body>
     </html>
   );
 }
