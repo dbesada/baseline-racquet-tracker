@@ -3,8 +3,8 @@ import { appendFile, readFile, rename, stat, writeFile } from "node:fs/promises"
 // Outbound "buy" links go through /go/<offer id>. The relay looks the ID up in
 // the price monitor's state file and redirects to the URL stored there, so a
 // visitor can never choose where they are sent (no open redirect). Each click
-// is logged with the time, offer, retailer and market only: no IP address,
-// user agent, referrer or cookie.
+// is logged with the time, offer, retailer, market and affiliate network (null
+// for a plain link) only: no IP address, user agent, referrer or cookie.
 //
 // The market is a property of the deployment (this one is Canada), not of an
 // offer, so another market runs the same code with BASELINE_MARKET set.
@@ -80,7 +80,10 @@ function createClickLog({ path, maxBytes, retentionDays, now }) {
 
 const notFoundPage = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><title>Deal not found · Baseline</title></head><body style="font-family:system-ui,sans-serif;max-width:32rem;margin:4rem auto;padding:0 1rem"><h1>This deal is no longer listed.</h1><p>The retailer may have sold out or changed the listing since this page loaded.</p><p><a href="/">Back to Baseline</a></p></body></html>`;
 
-export function createOutboundRedirect({ readState, clickLogPath, market = "CA", maxBytes = 5_000_000, retentionDays = 90, rememberDays = 7, now = Date.now }) {
+// Without affiliate settings every click goes to the plain retailer link.
+const plainLinks = (offer, destination) => ({ url: destination, network: null });
+
+export function createOutboundRedirect({ readState, clickLogPath, market = "CA", affiliate = plainLinks, maxBytes = 5_000_000, retentionDays = 90, rememberDays = 7, now = Date.now }) {
   const recordClick = createClickLog({ path: clickLogPath, maxBytes, retentionDays, now });
   // A price check rewrites the state file and drops offers that sold out, but
   // a page loaded earlier still links to them. Remember every offer the relay
@@ -122,11 +125,12 @@ export function createOutboundRedirect({ readState, clickLogPath, market = "CA",
       res.end(req.method === "HEAD" ? undefined : notFoundPage);
       return;
     }
+    const link = affiliate(offer, destination);
     // Logging never throws, so it cannot stop the visitor reaching the retailer.
     if (req.method === "GET") {
-      await recordClick({ ts: new Date(now()).toISOString(), offerId, retailer: offer.store ?? "Unknown", market });
+      await recordClick({ ts: new Date(now()).toISOString(), offerId, retailer: offer.store ?? "Unknown", market, network: link.network });
     }
-    res.writeHead(302, { location: destination, "cache-control": "no-store", "referrer-policy": "no-referrer" });
+    res.writeHead(302, { location: link.url, "cache-control": "no-store", "referrer-policy": "no-referrer" });
     res.end();
   }
 
