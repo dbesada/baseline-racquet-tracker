@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { modelFitTags, modelReason, recommendModels, recommendStrings, stringFitTags, stringReason } from "./coach-recommender";
+import { outboundRel } from "./baseline-catalogue";
 
 export type CoachModel = {
   key: string;
@@ -276,7 +277,7 @@ export function BaselineCoach({ models, strings, gripLabel, raised = false, onCo
                           <article className="coach-pick" key={model.key}>
                             <span className="coach-pick-rank">0{index + 1}</span>
                             <div><small>{model.brand} · {model.head ?? "Specs verified"}</small><h5>{model.name}</h5><div className="coach-fit-tags">{modelFitTags(model, answers).map((tag: string) => <span key={tag}>{tag}</span>)}</div><p>{modelReason(model, answers)}</p></div>
-                            <div className="coach-pick-deal"><span><b>{cad.format(model.price)}</b><small>{model.store}</small></span><a href={model.url} target="_blank" rel="noreferrer">View price ↗</a></div>
+                            <div className="coach-pick-deal"><span><b>{cad.format(model.price)}</b><small>{model.store}</small></span><a href={model.url} target="_blank" rel={outboundRel}>View price ↗</a></div>
                           </article>
                         ))}
                       </div>
@@ -292,7 +293,7 @@ export function BaselineCoach({ models, strings, gripLabel, raised = false, onCo
                           <article className="coach-pick coach-string-pick" key={item.key}>
                             <span className="coach-pick-rank">0{index + 1}</span>
                             <div><small>{item.brand} · {item.type} · {item.format}</small><h5>{item.title}</h5><div className="coach-fit-tags">{stringFitTags(item, answers).map((tag: string) => <span key={tag}>{tag}</span>)}</div><p>{stringReason(item, answers)}</p></div>
-                            <div className="coach-pick-deal"><span><b>{cad.format(item.price)}</b><small>{item.store}</small></span><a href={item.url} target="_blank" rel="noreferrer">View price ↗</a></div>
+                            <div className="coach-pick-deal"><span><b>{cad.format(item.price)}</b><small>{item.store}</small></span><a href={item.url} target="_blank" rel={outboundRel}>View price ↗</a></div>
                           </article>
                         ))}
                       </div>

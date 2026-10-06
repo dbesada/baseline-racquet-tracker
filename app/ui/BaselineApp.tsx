@@ -13,6 +13,7 @@ import {
   gripLabel,
   gripOptions,
   money,
+  outboundHref,
   uniqueRetailerOffers,
 } from "./baseline-catalogue";
 import { AccessoryMarket, useAccessoryMarket } from "./AccessoryMarket";
@@ -97,7 +98,7 @@ export function BaselineApp() {
     format: group.format,
     price: group.bestOffer.currentPrice ?? 0,
     store: group.bestOffer.store,
-    url: group.bestOffer.url,
+    url: outboundHref(group.bestOffer.id),
   })).filter((item) => item.price > 0), [stringMarket.allGroups]);
 
   const load = useCallback(async () => {

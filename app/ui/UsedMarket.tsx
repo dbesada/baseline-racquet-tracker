@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import type { Dashboard, GripSize, RacquetSpec, TargetEditor, UsedAvailability, UsedSort } from "./baseline-types";
-import { accents, gripLabel, gripOptions, money, offerMoney, relativeTime, usedMarketplaces } from "./baseline-catalogue";
+import { accents, gripLabel, gripOptions, money, offerMoney, outboundHref, outboundRel, relativeTime, usedMarketplaces } from "./baseline-catalogue";
 import type { MarketplaceHealth } from "./dashboard-insights";
 import { PatternBadge, RacquetImage } from "./racquet-visuals";
 import { SourceHealth } from "./RetailHero";
@@ -183,7 +183,7 @@ export function UsedMarket({ board, data, loading, checking, marketplaces, specs
       </div>
       <div className="sale-grid">
         {board.otherOffers.map((offer) => (
-          <a className="sale-offer" href={offer.url} target="_blank" rel="noreferrer" key={offer.id}>
+          <a className="sale-offer" href={outboundHref(offer.id)} target="_blank" rel={outboundRel} key={offer.id}>
             <span className="sale-store">{offer.store} · {offer.condition}</span>
             <strong>{offer.title}</strong>
             <span className="sale-prices"><b>{offerMoney(offer)}</b><i>{offer.gripSizes.join(", ")}{offer.currency === "USD" ? " · USD" : ""}</i></span>
@@ -255,7 +255,7 @@ function UsedModelCard({ modelKey, index, data, spec, targetEditor, onPreviewIma
       <div className="used-listing-stack">
         {!modelUsedOffers.length && <p className="empty used-empty">No exact {data?.gripSize ?? "L3"} match in the latest check. Try the live marketplace searches below.</p>}
         {modelUsedOffers.slice(0, 5).map((offer, offerIndex) => (
-          <a href={offer.url} target="_blank" rel="noreferrer" className="used-listing-row" key={offer.id}>
+          <a href={outboundHref(offer.id)} target="_blank" rel={outboundRel} className="used-listing-row" key={offer.id}>
             <span className="used-listing-rank">{offerIndex + 1}</span>
             <span className="used-listing-copy">
               <strong>{offer.title}</strong>

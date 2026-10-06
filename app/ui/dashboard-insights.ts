@@ -3,7 +3,7 @@
 
 import type { CoachModel } from "./BaselineCoach";
 import type { CatalogueMetric, Dashboard, Offer, OpportunityMode, RacquetSpec } from "./baseline-types";
-import { freshnessRank, isManufacturerSpec, manufacturerPublishedSpecs, modelBrand, notablePlayerFor, publishedStiffness, racquetSpecs, reportedTourPresence } from "./baseline-catalogue";
+import { freshnessRank, isManufacturerSpec, manufacturerPublishedSpecs, modelBrand, notablePlayerFor, outboundHref, publishedStiffness, racquetSpecs, reportedTourPresence } from "./baseline-catalogue";
 
 // Merges the built-in catalogue specs with what the latest check verified:
 // manufacturer specs first, then retailer consensus and corrections.
@@ -187,7 +187,7 @@ export function coachModels(data: Dashboard | null, specs: Record<string, Racque
       color: spec.color,
       price: best.currentPrice,
       store: best.store,
-      url: best.url,
+      url: outboundHref(best.id),
     }];
   });
 }

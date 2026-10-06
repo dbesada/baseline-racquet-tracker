@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import type { Dashboard, Offer, RacquetSpec } from "./baseline-types";
-import { maxCompareFrames, modelBrand, modelImage, money, patternPresentation, relativeTime, standardizedSpecDisplay, validationPresentation } from "./baseline-catalogue";
+import { maxCompareFrames, modelBrand, modelImage, money, outboundHref, outboundRel, patternPresentation, relativeTime, standardizedSpecDisplay, validationPresentation } from "./baseline-catalogue";
 import { PatternBadge, RacquetImage } from "./racquet-visuals";
 
 const comparisonRows: Array<[string, keyof RacquetSpec]> = [
@@ -59,7 +59,7 @@ export function RetailerDialog({ modelKey, data, offers, spec, onPreviewImage, o
         <div className="retailer-modal-list">
           {offers.map((offer, index) => {
             const delta = (offer.currentPrice ?? 0) - target;
-            return <a href={offer.url} target="_blank" rel="noreferrer" className={`retailer-modal-row ${offer.sourceState === "stale" ? "stale" : ""}`} key={`${modelKey}-${offer.store}`}>
+            return <a href={outboundHref(offer.id)} target="_blank" rel={outboundRel} className={`retailer-modal-row ${offer.sourceState === "stale" ? "stale" : ""}`} key={`${modelKey}-${offer.store}`}>
               <span className="retailer-modal-rank">{index + 1}</span>
               <span className="retailer-modal-store"><strong>{offer.store}</strong><small>{offer.gripSizes.length ? offer.gripSizes.join(", ") : "Confirm grip"} · {offer.sourceState === "stale" ? "last verified" : "checked"} {relativeTime(offer.lastChecked)}</small></span>
               <span className="retailer-modal-delta">{delta <= 0 ? `${money.format(Math.abs(delta))} under target` : `${money.format(delta)} over target`}</span>

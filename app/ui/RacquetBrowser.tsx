@@ -2,7 +2,7 @@
 
 import { useCallback, useMemo, useState } from "react";
 import type { BrandViewKey, CatalogueMetric, CatalogueSort, Dashboard, GripSize, HeadSizeFilter, PatternFilter, RacquetSpec, TargetEditor, WeightFilter } from "./baseline-types";
-import { accents, cataloguePageSize, featuredByBrand, gripOptions, matchesCatalogueFilters, maxCompareFrames, modelBrand, money, relativeTime, sortCatalogueKeys, specNumber, standardizedSpecDisplay, uniqueRetailerOffers, validationPresentation } from "./baseline-catalogue";
+import { accents, cataloguePageSize, featuredByBrand, gripOptions, matchesCatalogueFilters, maxCompareFrames, modelBrand, money, outboundHref, outboundRel, relativeTime, sortCatalogueKeys, specNumber, standardizedSpecDisplay, uniqueRetailerOffers, validationPresentation } from "./baseline-catalogue";
 import { PatternBadge, RacquetImage } from "./racquet-visuals";
 
 // Browse views that are not racquet lists.
@@ -132,7 +132,7 @@ export function RacquetBrowser({ catalogue, cards, modelFetch, onGripSizeChange 
       </div>
       <div className="sale-grid">
         {saleOffers.map((offer) => (
-          <a className="sale-offer" href={offer.url} target="_blank" rel="noreferrer" key={offer.id}>
+          <a className="sale-offer" href={outboundHref(offer.id)} target="_blank" rel={outboundRel} key={offer.id}>
             <span className="sale-store">{offer.store}</span>
             <strong>{offer.title}</strong>
             <span className="sale-prices"><b>{money.format(offer.currentPrice ?? 0)}</b><del>{offer.compareAtPrice != null ? money.format(offer.compareAtPrice) : ""}</del><i>↓ {offer.compareAtPrice && offer.currentPrice ? Math.round((1 - offer.currentPrice / offer.compareAtPrice) * 100) : 0}%</i></span>
@@ -239,7 +239,7 @@ function ModelCard({ modelKey, index, featured, cards }: { modelKey: string; ind
       <div className="offers">
         {loading ? <div className="loading-line" /> : available.length ? available.slice(0, 3).map((offer, offerIndex) => {
           const dropped = offer.previousPrice !== null && offer.currentPrice !== null && offer.currentPrice < offer.previousPrice;
-          return <a href={offer.url} target="_blank" rel="noreferrer" className="offer" key={offer.id} onClick={cards.onDealOpen}>
+          return <a href={outboundHref(offer.id)} target="_blank" rel={outboundRel} className="offer" key={offer.id} onClick={cards.onDealOpen}>
             <span className="rank">{offerIndex + 1}</span><span className="store"><strong>{offer.store}</strong><small>{offer.sourceState === "stale" ? `Last verified ${relativeTime(offer.lastChecked)}` : offer.gripSizes.length ? `${offer.gripSizes.length} grip sizes` : "Check grip sizes"}</small></span>
             <span className="offer-price"><strong>{money.format(offer.currentPrice ?? 0)}</strong>{dropped && <small>↓ {money.format((offer.previousPrice ?? 0) - (offer.currentPrice ?? 0))}</small>}</span><span className="arrow" aria-hidden="true">↗</span>
           </a>;

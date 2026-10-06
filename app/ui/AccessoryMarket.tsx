@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import type { AccessoryCategoryFilter, AccessoryGroup, AccessoryOffer, AccessorySort } from "./baseline-types";
-import { accessoryCategoryMarks, accessoryCategoryOrder, accessoryFamilyKey, accessoryPageSize, freshnessRank, money, relativeTime } from "./baseline-catalogue";
+import { accessoryCategoryMarks, accessoryCategoryOrder, accessoryFamilyKey, accessoryPageSize, freshnessRank, money, outboundHref, outboundRel, relativeTime } from "./baseline-catalogue";
 
 // Filter state lives in the parent (through this hook) so the choices survive
 // switching to another tab and back.
@@ -164,7 +164,7 @@ function AccessoryCard({ group }: { group: AccessoryGroup }) {
         <summary>Compare {group.offers.length} {group.offers.length === 1 ? "offer" : "offers"}</summary>
         <div>
           {group.offers.map((retailerOffer) => (
-            <a href={retailerOffer.url} target="_blank" rel="noreferrer" key={retailerOffer.id}>
+            <a href={outboundHref(retailerOffer.id)} target="_blank" rel={outboundRel} key={retailerOffer.id}>
               <span><strong>{retailerOffer.store}</strong><small>{retailerOffer.detail}{retailerOffer.sourceState === "stale" ? ` · last verified ${relativeTime(retailerOffer.lastChecked)}` : ""}</small></span>
               <b>{money.format(retailerOffer.currentPrice ?? 0)}</b>
               <i aria-hidden="true">↗</i>

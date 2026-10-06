@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import type { BallGroup, BallOffer, BallSort, BallTypeFilter } from "./baseline-types";
-import { ballFamilyKey, ballPageSize, ballTypeOrder, freshnessRank, money, relativeTime } from "./baseline-catalogue";
+import { ballFamilyKey, ballPageSize, ballTypeOrder, freshnessRank, money, outboundHref, outboundRel, relativeTime } from "./baseline-catalogue";
 
 // Filter state lives in the parent (through this hook) so the choices survive
 // switching to another tab and back.
@@ -105,7 +105,7 @@ export function BallMarket({ market, loading }: { market: BallMarketState; loadi
               <div className="accessory-card-price"><span><small>{offer.sourceState === "stale" ? "LAST VERIFIED" : "BEST PRICE"}</small><strong>{money.format(offer.currentPrice ?? 0)}</strong></span><span><small>AT</small><b>{offer.store}</b></span></div>
               {discounted && <div className="accessory-saving"><del>{money.format(offer.compareAtPrice ?? 0)}</del><strong>Save {Math.round((1 - (offer.currentPrice ?? 0) / (offer.compareAtPrice ?? 1)) * 100)}%</strong></div>}
               <details className="accessory-retailers"><summary>Compare {group.offers.length} {group.offers.length === 1 ? "offer" : "offers"}</summary><div>
-                {group.offers.map((retailerOffer) => <a href={retailerOffer.url} target="_blank" rel="noreferrer" key={retailerOffer.id}><span><strong>{retailerOffer.store}</strong><small>{retailerOffer.package}{retailerOffer.sourceState === "stale" ? ` · last verified ${relativeTime(retailerOffer.lastChecked)}` : ""}</small></span><b>{money.format(retailerOffer.currentPrice ?? 0)}</b><i aria-hidden="true">↗</i></a>)}
+                {group.offers.map((retailerOffer) => <a href={outboundHref(retailerOffer.id)} target="_blank" rel={outboundRel} key={retailerOffer.id}><span><strong>{retailerOffer.store}</strong><small>{retailerOffer.package}{retailerOffer.sourceState === "stale" ? ` · last verified ${relativeTime(retailerOffer.lastChecked)}` : ""}</small></span><b>{money.format(retailerOffer.currentPrice ?? 0)}</b><i aria-hidden="true">↗</i></a>)}
               </div></details>
             </article>
           );
