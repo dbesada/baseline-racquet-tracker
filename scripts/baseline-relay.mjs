@@ -393,6 +393,8 @@ async function dashboardWithLivePrices() {
     // The UI still loads normally before the first collector run completes.
   }
   dashboard.modelRefresh = modelRefreshState;
+  // Retailers with an enabled affiliate link; the UI shows its disclosure while any are listed.
+  dashboard.affiliateRetailers = affiliate.retailers;
   let settings = await readPersistentSettings();
   if (!settings) {
     settings = settingsSnapshot(dashboard);

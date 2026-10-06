@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { modelFitTags, modelReason, recommendModels, recommendStrings, stringFitTags, stringReason } from "./coach-recommender";
+import { AffiliateNote } from "./AffiliateNote";
 import { outboundRel } from "./baseline-catalogue";
 
 export type CoachModel = {
@@ -61,6 +62,7 @@ type BaselineCoachProps = {
   raised?: boolean;
   onCompare: (modelKeys: string[]) => void;
   onOpen?: () => void;
+  affiliateLinksOn?: boolean;
 };
 
 const profileKey = "baseline-coach-profile-v2";
@@ -161,7 +163,7 @@ function questionsFor(answers: CoachAnswers): Question[] {
   return answers.focus === "complete" ? [...common, formatQuestion, ...racquetQuestions] : [...common, ...racquetQuestions];
 }
 
-export function BaselineCoach({ models, strings, gripLabel, raised = false, onCompare, onOpen }: BaselineCoachProps) {
+export function BaselineCoach({ models, strings, gripLabel, raised = false, onCompare, onOpen, affiliateLinksOn = false }: BaselineCoachProps) {
   const [open, setOpen] = useState(false);
   const [started, setStarted] = useState(false);
   const [completed, setCompleted] = useState(false);
@@ -268,6 +270,7 @@ export function BaselineCoach({ models, strings, gripLabel, raised = false, onCo
                   <p>These rankings use every choice below, verified specs, current Canadian availability and price. Style only influences the list when you asked for it.</p>
                     <div className="coach-answer-summary" aria-label="Answers used for this fit">{answerSummary.map((answer) => <span key={answer}>{answer}</span>)}</div>
                   </div>
+                  <AffiliateNote show={affiliateLinksOn} />
 
                   {showModels && (
                     <section className="coach-result-section" aria-labelledby="coach-racquet-picks">

@@ -1,6 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { hasAffiliateLinks } from "./affiliate-disclosure";
+import { AffiliateNote } from "./AffiliateNote";
 import type { Dashboard, GripSize, RacquetSpec, TargetEditor, UsedAvailability, UsedSort } from "./baseline-types";
 import { accents, gripLabel, gripOptions, money, offerMoney, outboundHref, outboundRel, relativeTime, usedMarketplaces } from "./baseline-catalogue";
 import type { MarketplaceHealth } from "./dashboard-insights";
@@ -93,6 +95,7 @@ export function UsedMarket({ board, data, loading, checking, marketplaces, specs
         </div>
         <div className="legend"><span className="used-dot" /> Public used listings <span className="stock-dot" /> {data?.gripSize ?? "L3"} verified</div>
       </div>
+      <AffiliateNote show={hasAffiliateLinks(data)} />
 
       <div className="used-summary-strip" aria-label="Used market summary">
         <div><span>Live listings</span><strong>{data?.usedOffers.length ?? 0}</strong><small>exact model + grip</small></div>

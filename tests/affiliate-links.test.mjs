@@ -23,11 +23,10 @@ test("the shipped Canadian and U.S. files are valid and kept apart", async () =>
   assert.match(affiliateConfigUrl("US").href, /\/config\/affiliates\/us\.json$/);
 });
 
-test("no affiliate link is switched on before the disclosure ships (Slice 3)", async () => {
-  // Remove this test when the affiliate disclosure is live on the site.
-  for (const file of ["config/affiliates/ca.json", "config/affiliates/us.json"]) {
-    assert.deepEqual((await read(file)).retailers.filter((entry) => entry.enabled).map((entry) => entry.retailer), [], file);
-  }
+test("only enabled entries count as affiliate retailers for the disclosure", () => {
+  const { entries } = validateAffiliateConfig(config([amazon, wrapped, { ...amazon, retailer: "Just Tennis", enabled: false, hosts: ["www.justtennis.ca"] }]), "CA");
+  assert.deepEqual(createAffiliateLinks(entries).retailers, ["Amazon.ca", "Sport Chek"]);
+  assert.deepEqual(createAffiliateLinks(new Map()).retailers, []);
 });
 
 test("valid entries are accepted, by retailer name", () => {
@@ -118,6 +117,7 @@ test("the relay reads only its own market's file, and the image ships it", async
   assert.match(relay, /loadAffiliateLinks\(\{ market,/);
   assert.match(relay, /createOutboundRedirect\(\{[\s\S]*?\baffiliate,[\s\S]*?\}\);/);
   assert.doesNotMatch(relay, /affiliates\/us\.json|affiliates\/ca\.json/, "the file must be chosen by market, not hard-coded");
+  assert.match(relay, /dashboard\.affiliateRetailers = affiliate\.retailers;\s*\r?\n\s*let settings = await readPersistentSettings\(\);/, "the dashboard must tell the UI when affiliate links are on");
   const dockerignore = (await readFile(new URL("../.dockerignore", import.meta.url), "utf8")).split(/\r?\n/).map((line) => line.trim());
   assert.ok(!dockerignore.some((line) => /^\/?config\/?/.test(line)), ".dockerignore must not leave the affiliate files out of the image");
 });
