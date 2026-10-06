@@ -260,26 +260,11 @@ async function getGripSize(): Promise<GripSize> {
 async function ensureSchema() {
   const database = db();
   await database.batch([
-    database.prepare(`CREATE TABLE IF NOT EXISTS offers (
-      id TEXT PRIMARY KEY, model_key TEXT NOT NULL, store TEXT NOT NULL,
-      title TEXT NOT NULL, url TEXT NOT NULL, current_price REAL,
-      previous_price REAL, compare_at_price REAL, in_stock INTEGER NOT NULL,
-      grip_sizes TEXT NOT NULL DEFAULT '[]', last_checked TEXT NOT NULL
-    )`),
-    database.prepare(`CREATE TABLE IF NOT EXISTS price_history (
-      id INTEGER PRIMARY KEY AUTOINCREMENT, offer_id TEXT NOT NULL,
-      model_key TEXT NOT NULL, price REAL NOT NULL, checked_at TEXT NOT NULL
-    )`),
     database.prepare(`CREATE TABLE IF NOT EXISTS targets (
       model_key TEXT PRIMARY KEY, target_price REAL NOT NULL
     )`),
     database.prepare(`CREATE TABLE IF NOT EXISTS used_targets (
       model_key TEXT PRIMARY KEY, target_price REAL NOT NULL
-    )`),
-    database.prepare(`CREATE TABLE IF NOT EXISTS checks (
-      id INTEGER PRIMARY KEY AUTOINCREMENT, checked_at TEXT NOT NULL,
-      stores_checked INTEGER NOT NULL, offers_found INTEGER NOT NULL,
-      failures INTEGER NOT NULL
     )`),
     database.prepare(`CREATE TABLE IF NOT EXISTS retailer_settings (
       retailer_key TEXT PRIMARY KEY, retailer_name TEXT NOT NULL,
@@ -298,14 +283,6 @@ async function ensureSchema() {
       brand TEXT NOT NULL, slot INTEGER NOT NULL, model_key TEXT NOT NULL,
       PRIMARY KEY (brand, slot)
     )`),
-    database.prepare(`CREATE TABLE IF NOT EXISTS used_offers (
-      id TEXT PRIMARY KEY, model_key TEXT NOT NULL, store TEXT NOT NULL,
-      title TEXT NOT NULL, url TEXT NOT NULL, current_price REAL,
-      compare_at_price REAL, in_stock INTEGER NOT NULL,
-      grip_sizes TEXT NOT NULL DEFAULT '[]', condition TEXT NOT NULL,
-      last_checked TEXT NOT NULL
-    )`),
-    database.prepare("CREATE INDEX IF NOT EXISTS price_history_model_idx ON price_history(model_key, checked_at)"),
   ]);
   await database.prepare("INSERT OR IGNORE INTO tracker_preferences (key, value) VALUES ('grip_size', 'L3')").run();
 
@@ -342,6 +319,29 @@ async function ensureSchema() {
       "INSERT INTO settings_migrations (migration_key, applied_at) VALUES (?, ?)",
     ).bind("automate-public-catalogs-v1", new Date().toISOString()).run();
   }
+  // Prices live in the monitor's state file (.data/baseline-monitor.json), which
+  // the relay serves. Nothing has written these tables since the API stopped
+  // reading retailer pages, so an old database only holds stale prices.
+  const priceTablesMigration = await database.prepare(
+    "SELECT migration_key FROM settings_migrations WHERE migration_key = ?",
+  ).bind("drop-unused-price-tables-v1").first();
+  if (!priceTablesMigration) {
+    await database.batch([
+      database.prepare("DROP INDEX IF EXISTS price_history_model_idx"),
+      ...["offers", "price_history", "checks", "used_offers"].map((table) => database.prepare(`DROP TABLE IF EXISTS ${table}`)),
+      database.prepare("INSERT INTO settings_migrations (migration_key, applied_at) VALUES (?, ?)")
+        .bind("drop-unused-price-tables-v1", new Date().toISOString()),
+    ]);
+  }
+  // A database kept across releases can hold rows for models or retailers that
+  // have since left the catalogue.
+  const modelKeys = JSON.stringify(Object.keys(defaultTargets));
+  await database.batch([
+    database.prepare("DELETE FROM targets WHERE model_key NOT IN (SELECT value FROM json_each(?))").bind(modelKeys),
+    database.prepare("DELETE FROM used_targets WHERE model_key NOT IN (SELECT value FROM json_each(?))").bind(modelKeys),
+    database.prepare("DELETE FROM retailer_settings WHERE retailer_key NOT IN (SELECT value FROM json_each(?))")
+      .bind(JSON.stringify(feeds.map((feed) => feed.key))),
+  ]);
 }
 
 async function getRetailerSettings() {
@@ -361,42 +361,13 @@ async function getDashboard(publicPreview = false) {
   await ensureSchema();
   const database = db();
   const gripSize = await getGripSize();
-  const [offersResult, usedOffersResult, targetsResult, usedTargetsResult, checksResult, historyResult, dropsResult, retailerSettings, shortlistResult, brandFeaturedResult] = await Promise.all([
-    database.prepare(`SELECT id, model_key AS modelKey, store, title, url,
-      current_price AS currentPrice, previous_price AS previousPrice,
-      compare_at_price AS compareAtPrice, in_stock AS inStock,
-      grip_sizes AS gripSizes, last_checked AS lastChecked
-      FROM offers WHERE current_price IS NOT NULL ORDER BY model_key, current_price ASC`).all(),
-    database.prepare(`SELECT id, model_key AS modelKey, store, title, url,
-      current_price AS currentPrice, compare_at_price AS compareAtPrice,
-      in_stock AS inStock, grip_sizes AS gripSizes, condition, last_checked AS lastChecked
-      FROM used_offers WHERE current_price IS NOT NULL AND current_price > 0 AND in_stock = 1 ORDER BY model_key, current_price ASC`).all(),
+  const [targetsResult, usedTargetsResult, retailerSettings, shortlistResult, brandFeaturedResult] = await Promise.all([
     database.prepare("SELECT model_key AS modelKey, target_price AS targetPrice FROM targets").all(),
     database.prepare("SELECT model_key AS modelKey, target_price AS targetPrice FROM used_targets").all(),
-    database.prepare("SELECT checked_at AS checkedAt, stores_checked AS storesChecked, offers_found AS offersFound, failures FROM checks ORDER BY id DESC LIMIT 1").first(),
-    database.prepare(`SELECT model_key AS modelKey, MIN(price) AS price, checked_at AS checkedAt
-      FROM price_history GROUP BY model_key, checked_at ORDER BY checked_at DESC LIMIT 60`).all(),
-    database.prepare(`SELECT COUNT(DISTINCT offer_id) AS count FROM (
-      SELECT offer_id, price, checked_at,
-        LAG(price) OVER (PARTITION BY offer_id ORDER BY checked_at) AS previous_price
-      FROM price_history
-    ) WHERE checked_at >= ? AND previous_price IS NOT NULL AND price < previous_price`)
-      .bind(new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()).first(),
     getRetailerSettings(),
     database.prepare("SELECT slot, model_key AS modelKey FROM shortlist_slots ORDER BY slot").all(),
     database.prepare("SELECT brand, slot, model_key AS modelKey FROM brand_featured_slots ORDER BY brand, slot").all(),
   ]);
-
-  const offers = ((offersResult as D1Result<Record<string, unknown>>).results ?? []).map((offer) => ({
-    ...offer,
-    inStock: Boolean(offer.inStock),
-    gripSizes: JSON.parse(String(offer.gripSizes || "[]")),
-  }));
-  const usedOffers = ((usedOffersResult as D1Result<Record<string, unknown>>).results ?? []).map((offer) => ({
-    ...offer,
-    inStock: Boolean(offer.inStock),
-    gripSizes: JSON.parse(String(offer.gripSizes || "[]")),
-  }));
 
   const targetMap = Object.fromEntries(
     ((targetsResult as D1Result<{ modelKey: string; targetPrice: number }>).results ?? [])
@@ -414,25 +385,24 @@ async function getDashboard(publicPreview = false) {
     return [brand, picks.length === featuredSlotCount ? picks : defaultBrandPicks[brand]];
   }));
 
+  // Prices, history and check results come from the price monitor; the relay
+  // fills them in from its state file.
   return Response.json({
     publicPreview,
-    offers,
-    usedOffers,
+    offers: [],
+    usedOffers: [],
     stringOffers: [],
     stringSourceResults: [],
     accessoryOffers: [],
     accessorySourceResults: [],
     ballOffers: [],
     ballSourceResults: [],
-    saleOffers: offers
-      .filter((offer) => offer.modelKey === "other-sale" && offer.currentPrice !== null && offer.compareAtPrice !== null && offer.compareAtPrice > offer.currentPrice)
-      .sort((a, b) => (a.currentPrice ?? Infinity) - (b.currentPrice ?? Infinity))
-      .slice(0, 18),
+    saleOffers: [],
     targets: targetMap,
     usedTargets: usedTargetMap,
-    lastCheck: checksResult ?? null,
-    dropsLast24Hours: Number((dropsResult as { count?: number } | null)?.count ?? 0),
-    history: (historyResult as D1Result).results ?? [],
+    lastCheck: null,
+    dropsLast24Hours: 0,
+    history: [],
     modelNames,
     modelOptions: Object.entries(modelNames).map(([key, name]) => ({
       key,

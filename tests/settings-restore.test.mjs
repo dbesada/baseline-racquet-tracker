@@ -66,3 +66,16 @@ test("the API stores the restored settings, and only the relay can ask for it", 
   assert.match(relay, /\nvoid restoreDatabaseSettings\(\);/);
   assert.match(relay, /if \(parsedBody\?\.restoreSettings !== undefined\) \{[^}]*writeHead\(400/);
 });
+
+test("the API drops the unused price tables and rows that left the catalogue", () => {
+  const route = read("app/api/tracker/route.ts");
+  for (const table of ["offers", "price_history", "checks", "used_offers"]) {
+    assert.doesNotMatch(route, new RegExp(`CREATE TABLE IF NOT EXISTS ${table}\\b|FROM ${table}\\b`), `${table} is no longer created or read`);
+  }
+  assert.match(route, /\["offers", "price_history", "checks", "used_offers"\]\.map\(\(table\) => database\.prepare\(`DROP TABLE IF EXISTS \$\{table\}`\)\)/);
+  assert.match(route, /"drop-unused-price-tables-v1"/);
+  for (const table of ["targets", "used_targets"]) {
+    assert.match(route, new RegExp(`DELETE FROM ${table} WHERE model_key NOT IN \\(SELECT value FROM json_each\\(\\?\\)\\)`));
+  }
+  assert.match(route, /DELETE FROM retailer_settings WHERE retailer_key NOT IN \(SELECT value FROM json_each\(\?\)\)/);
+});

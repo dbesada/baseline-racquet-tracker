@@ -44,7 +44,6 @@ test("ships the finished Baseline tracker and its price API", async () => {
   assert.equal(new Set(racquetImages).size, 30);
   await Promise.all(racquetImages.map((filename) => access(new URL(`../public/racquets/${filename.split("?")[0]}`, import.meta.url))));
   assert.match(route, /collections\/tennis-racquets/);
-  assert.match(route, /price_history/);
   assert.match(monitor, /isGripThree/);
   assert.match(route, /saleOffers/);
   assert.match(route, /retailer_settings/);
