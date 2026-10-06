@@ -1,4 +1,32 @@
-import type { AnalyticsSummary } from "./baseline-types";
+import type { AnalyticsSummary, RetailerWeekRow, RetailerWeeks } from "./baseline-types";
+
+const weekLabel = (monday: string) => new Date(`${monday}T12:00:00Z`).toLocaleDateString("en-CA", { month: "short", day: "numeric", timeZone: "UTC" });
+
+function RetailerWeekCells({ row }: { row: RetailerWeekRow }) {
+  return <>
+    <th scope="row">{row.retailer}</th>
+    {row.weeks.map((count, index) => <td key={index}>{count || "·"}</td>)}
+    <td><b>{row.total}</b></td>
+    <td>{row.affiliate ? `${Math.round((row.affiliate / row.total) * 100)}%` : "—"}</td>
+  </>;
+}
+
+// Clicks per retailer per week from the /go/ click log (admin only).
+function RetailerWeeksTable({ report }: { report: RetailerWeeks }) {
+  return (
+    <section className="analytics-section analytics-retailer-weeks">
+      <div><span className="settings-label">RETAILER CLICKS BY WEEK</span><strong>Where visitors go to buy</strong></div>
+      {report.totalClicks ? <div className="analytics-table-scroll"><table>
+        <thead><tr><th scope="col">Retailer</th>{report.weeks.map((week, index) => <th scope="col" key={week}>{index === 0 ? "This week" : weekLabel(week)}</th>)}<th scope="col">Total</th><th scope="col">Affiliate</th></tr></thead>
+        <tbody>
+          {report.retailers.map((row) => <tr key={row.retailer}><RetailerWeekCells row={row} /></tr>)}
+          {report.other && <tr className="analytics-other"><RetailerWeekCells row={report.other} /></tr>}
+        </tbody>
+      </table></div> : <p>No retailer clicks recorded yet. Clicks are counted from this release on.</p>}
+      <p className="analytics-table-note">Weeks start Monday, Toronto time. “Affiliate” is the share of clicks that went through an affiliate link.</p>
+    </section>
+  );
+}
 
 export function AnalyticsPanel({ analytics, loading, onClose }: { analytics: AnalyticsSummary | null; loading: boolean; onClose: () => void }) {
   return (
@@ -14,6 +42,7 @@ export function AnalyticsPanel({ analytics, loading, onClose }: { analytics: Ana
           </div>
           <section className="analytics-section"><div><span className="settings-label">DAILY MOMENTUM</span><strong>Visits and retailer clicks</strong></div><div className="analytics-days">{analytics.daily.length ? analytics.daily.map((day) => <div key={day.date}><span style={{ height: `${Math.max(7, Math.min(100, day.pageViews * 12))}%` }} title={`${day.pageViews} page views`} /><i style={{ height: `${Math.max(4, Math.min(100, day.dealOpens * 18))}%` }} title={`${day.dealOpens} retailer clicks`} /><small>{day.date.slice(5)}</small></div>) : <p>Collection starts with this release. Check back after beta visitors have used the app.</p>}</div></section>
           <section className="analytics-section analytics-split"><div><span className="settings-label">WHAT PEOPLE BROWSE</span>{analytics.sections.length ? <ol>{analytics.sections.slice(0, 6).map((item) => <li key={item.section}><span>{item.section.replaceAll("-", " ")}</span><b>{item.count}</b></li>)}</ol> : <p>No section changes recorded yet.</p>}</div><div><span className="settings-label">TRACKER HEALTH</span><ol><li><span>Fresh listings</span><b>{analytics.operations.freshOffers}</b></li><li><span>Retailer sources live</span><b>{analytics.operations.liveSources}/{analytics.operations.totalSources}</b></li><li><span>Price drops, 24h</span><b>{analytics.operations.dropsLast24Hours}</b></li><li><span>Baseline Coach opens</span><b>{analytics.totals.coachOpens}</b></li></ol></div></section>
+          {analytics.retailerWeeks && <RetailerWeeksTable report={analytics.retailerWeeks} />}
           <p className="analytics-note">Analytics began {new Date(analytics.startedAt).toLocaleDateString("en-CA", { month: "short", day: "numeric", year: "numeric" })}. Counts are event totals, not a claim of unique people.</p>
         </> : <p className="analytics-loading">No analytics snapshot is available yet.</p>}
       </section>

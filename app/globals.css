@@ -71,6 +71,14 @@ main { min-height: 100vh; overflow-x: clip; }
 .analytics-days i { background: var(--lime); }
 .analytics-days small { position: absolute; bottom: -20px; width: 100%; color: var(--muted); font-size: .52rem; text-align: center; }
 .analytics-days > p { color: var(--muted); font-size: .75rem; }
+.analytics-retailer-weeks > p { color: var(--muted); font-size: .75rem; }
+.analytics-table-scroll { margin-top: 14px; overflow-x: auto; border-radius: 10px; background: var(--paper); }
+.analytics-table-scroll table { width: 100%; border-collapse: collapse; font-size: .74rem; font-variant-numeric: tabular-nums; }
+.analytics-table-scroll th, .analytics-table-scroll td { padding: 7px 8px; border-bottom: 1px solid var(--line); text-align: right; white-space: nowrap; }
+.analytics-table-scroll th[scope="row"], .analytics-table-scroll thead th:first-child { position: sticky; left: 0; text-align: left; background: var(--paper); }
+.analytics-table-scroll thead th { color: var(--muted); font-size: .6rem; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; }
+.analytics-other { color: var(--muted); }
+.analytics-retailer-weeks .analytics-table-note { margin: 10px 0 0; font-size: .66rem; }
 .analytics-split { display: grid; grid-template-columns: 1fr 1fr; gap: 26px; }
 .analytics-split ol { margin: 12px 0 0; padding: 0; list-style: none; }
 .analytics-split li { display: flex; justify-content: space-between; gap: 12px; padding: 9px 0; border-bottom: 1px solid rgba(16,37,29,.1); color: var(--muted); font-size: .75rem; text-transform: capitalize; }
