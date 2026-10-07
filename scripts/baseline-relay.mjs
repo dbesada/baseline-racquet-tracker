@@ -6,6 +6,7 @@ import { gzipSync } from "node:zlib";
 import { createAccessVerifier, isAdminRequest, parseLoginList } from "./access-control.mjs";
 import { loadAffiliateLinks } from "./affiliate-links.mjs";
 import { createAuditLog } from "./audit-log.mjs";
+import { emptyAnalytics, recordEvent, reportDays, summarizeAnalytics } from "./analytics.mjs";
 import { readClickRows, weeklyRetailerClicks } from "./click-report.mjs";
 import { pickSaleOffers } from "../app/lib/sale-rack.js";
 import { createOutboundRedirect, marketFrom } from "./outbound-redirect.mjs";
@@ -146,69 +147,27 @@ function runPriceCheck(forceModelAudit = false) {
   return activeCheck;
 }
 
-const analyticsEvents = new Set(["page_view", "browse_section", "used_market", "retailer_open", "comparison_open", "deal_open", "coach_open"]);
-
-function analyticsDay() {
-  return new Date().toISOString().slice(0, 10);
-}
-
 async function readAnalytics() {
   try {
     const parsed = JSON.parse(await readFile(analyticsFile, "utf8"));
-    return parsed && typeof parsed === "object" ? parsed : { version: 1, startedAt: new Date().toISOString(), days: {} };
+    return parsed && typeof parsed === "object" && parsed.days ? parsed : emptyAnalytics();
   } catch {
-    return { version: 1, startedAt: new Date().toISOString(), days: {} };
+    return emptyAnalytics();
   }
 }
 
 async function recordAnalytics(event, detail) {
-  if (!analyticsEvents.has(event)) return false;
+  let accepted = false;
   analyticsWrite = analyticsWrite.then(async () => {
     const analytics = await readAnalytics();
-    const day = analyticsDay();
-    const bucket = analytics.days[day] ?? { events: {}, details: {} };
-    bucket.events[event] = (bucket.events[event] ?? 0) + 1;
-    if (event === "browse_section" && /^[a-z-]{2,24}$/.test(detail ?? "")) {
-      bucket.details[detail] = (bucket.details[detail] ?? 0) + 1;
-    }
-    analytics.days[day] = bucket;
-    const cutoff = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
-    for (const key of Object.keys(analytics.days)) if (key < cutoff) delete analytics.days[key];
+    accepted = recordEvent(analytics, event, detail);
+    if (!accepted) return;
     const temporary = `${analyticsFile}.tmp`;
     await writeFile(temporary, JSON.stringify(analytics, null, 2));
     await rename(temporary, analyticsFile);
   }).catch(() => {});
   await analyticsWrite;
-  return true;
-}
-
-function summarizeAnalytics(analytics, dashboard) {
-  const days = Object.entries(analytics.days ?? {}).sort(([a], [b]) => a.localeCompare(b)).slice(-14);
-  const totals = { pageViews: 0, dealOpens: 0, retailerOpens: 0, comparisons: 0, coachOpens: 0, usedMarket: 0 };
-  const sections = {};
-  for (const [, bucket] of days) {
-    totals.pageViews += bucket.events?.page_view ?? 0;
-    totals.dealOpens += bucket.events?.deal_open ?? 0;
-    totals.retailerOpens += bucket.events?.retailer_open ?? 0;
-    totals.comparisons += bucket.events?.comparison_open ?? 0;
-    totals.coachOpens += bucket.events?.coach_open ?? 0;
-    totals.usedMarket += bucket.events?.used_market ?? 0;
-    for (const [section, count] of Object.entries(bucket.details ?? {})) sections[section] = (sections[section] ?? 0) + count;
-  }
-  return {
-    startedAt: analytics.startedAt,
-    windowDays: days.length,
-    totals,
-    daily: days.map(([date, bucket]) => ({ date, pageViews: bucket.events?.page_view ?? 0, dealOpens: bucket.events?.deal_open ?? 0 })),
-    sections: Object.entries(sections).map(([section, count]) => ({ section, count })).sort((a, b) => b.count - a.count),
-    operations: {
-      freshOffers: dashboard.sourceHealth?.freshOffers ?? 0,
-      liveSources: dashboard.sourceHealth?.liveSources ?? 0,
-      totalSources: dashboard.sourceHealth?.totalSources ?? 0,
-      dropsLast24Hours: dashboard.dropsLast24Hours ?? 0,
-      lastChecked: dashboard.lastCheck?.checkedAt ?? null,
-    },
-  };
+  return accepted;
 }
 
 async function runSelectedModelRefresh(modelKey) {
@@ -506,7 +465,8 @@ async function handleAnalytics(req, res) {
   }
   const [analytics, dashboard, clicks] = await Promise.all([readAnalytics(), dashboardWithLivePrices(), readClickRows(clickLogFile)]);
   // Admin only: public preview requests returned above.
-  sendJson(req, res, { ...summarizeAnalytics(analytics, dashboard), retailerWeeks: weeklyRetailerClicks(clicks) });
+  const days = reportDays(url.searchParams.get("days"));
+  sendJson(req, res, { ...summarizeAnalytics(analytics, { clicks, dashboard, days }), retailerWeeks: weeklyRetailerClicks(clicks) });
 }
 
 async function handleEbayAccountDeletion(req, res) {

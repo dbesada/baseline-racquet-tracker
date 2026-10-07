@@ -64,6 +64,8 @@ type BaselineCoachProps = {
   /** The parent owns whether the coach is open, so other buttons can open it too. */
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** Called when someone answers the last question (for aggregate analytics). */
+  onComplete?: (focus: string) => void;
   affiliateLinksOn?: boolean;
 };
 
@@ -165,7 +167,7 @@ function questionsFor(answers: CoachAnswers): Question[] {
   return answers.focus === "complete" ? [...common, formatQuestion, ...racquetQuestions] : [...common, ...racquetQuestions];
 }
 
-export function BaselineCoach({ models, strings, gripLabel, raised = false, onCompare, open, onOpenChange, affiliateLinksOn = false }: BaselineCoachProps) {
+export function BaselineCoach({ models, strings, gripLabel, raised = false, onCompare, open, onOpenChange, onComplete, affiliateLinksOn = false }: BaselineCoachProps) {
   const setOpen = onOpenChange;
   const [started, setStarted] = useState(false);
   const [completed, setCompleted] = useState(false);
@@ -208,6 +210,7 @@ export function BaselineCoach({ models, strings, gripLabel, raised = false, onCo
     setAnswers(next);
     if (step >= questions.length - 1) {
       setCompleted(true);
+      onComplete?.(next.focus ?? "complete");
       setSavedProfile(next);
       try { window.localStorage.setItem(profileKey, JSON.stringify(next)); } catch { /* local saving is optional */ }
     } else {
