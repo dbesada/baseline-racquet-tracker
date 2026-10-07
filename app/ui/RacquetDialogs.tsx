@@ -1,10 +1,12 @@
 "use client";
 
 import Image from "next/image";
+import { useState } from "react";
 import { hasAffiliateLinks } from "./affiliate-disclosure";
 import { AffiliateNote } from "./AffiliateNote";
 import type { Dashboard, Offer, RacquetSpec } from "./baseline-types";
 import { maxCompareFrames, modelBrand, modelImage, money, outboundHref, outboundRel, patternPresentation, relativeTime, standardizedSpecDisplay, validationPresentation } from "./baseline-catalogue";
+import { racquetHash } from "./racquet-link";
 import { PatternBadge, RacquetImage } from "./racquet-visuals";
 
 const comparisonRows: Array<[string, keyof RacquetSpec]> = [
@@ -41,6 +43,16 @@ function SpecValue({ field, spec }: { field: keyof RacquetSpec; spec?: RacquetSp
 
 export type RacquetDialogTab = "specs" | "retailers";
 
+// Copies the racquet's shareable link (#racquet-<model key>).
+function CopyRacquetLink({ modelKey }: { modelKey: string }) {
+  const [copied, setCopied] = useState(false);
+  const copy = () => {
+    const link = `${window.location.origin}${window.location.pathname}${racquetHash(modelKey)}`;
+    navigator.clipboard?.writeText(link).then(() => { setCopied(true); setTimeout(() => setCopied(false), 1600); }, () => window.prompt?.("Copy this link", link));
+  };
+  return <button className="racquet-dialog-compare" onClick={copy}>{copied ? "Link copied" : "Copy link"}</button>;
+}
+
 // A racquet's own pop-up: its full specifications and every retailer's price.
 // Opened from a racquet's name or photo (Specs tab) or "Browse every retailer"
 // (Retailers tab).
@@ -75,7 +87,10 @@ export function RetailerDialog({ modelKey, data, offers, spec, tab, compared, co
             <button role="tab" id="racquet-tab-specs" aria-selected={tab === "specs"} aria-controls="racquet-panel" className={tab === "specs" ? "active" : ""} onClick={() => onTabChange("specs")}>Specs</button>
             <button role="tab" id="racquet-tab-retailers" aria-selected={tab === "retailers"} aria-controls="racquet-panel" className={tab === "retailers" ? "active" : ""} onClick={() => onTabChange("retailers")}>Retailers{offers.length ? ` (${offers.length})` : ""}</button>
           </div>
-          <button className={`racquet-dialog-compare ${compared ? "on" : ""}`} disabled={!compared && compareFull} onClick={() => onToggleCompare(modelKey)}>{compared ? "✓ In comparison" : compareFull ? "Comparison full" : "+ Compare"}</button>
+          <div className="racquet-dialog-actions">
+            <CopyRacquetLink modelKey={modelKey} />
+            <button className={`racquet-dialog-compare ${compared ? "on" : ""}`} disabled={!compared && compareFull} onClick={() => onToggleCompare(modelKey)}>{compared ? "✓ In comparison" : compareFull ? "Comparison full" : "+ Compare"}</button>
+          </div>
         </div>
         <div id="racquet-panel" role="tabpanel" aria-labelledby={tab === "specs" ? "racquet-tab-specs" : "racquet-tab-retailers"}>
         {tab === "specs" ? <>

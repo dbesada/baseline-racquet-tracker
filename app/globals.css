@@ -671,6 +671,7 @@ h2 { margin: 0; font-size: clamp(2rem, 3.5vw, 3.6rem); letter-spacing: -.055em; 
 .racquet-dialog-tabs { display: inline-flex; padding: 3px; border: 1px solid var(--line); border-radius: 999px; }
 .racquet-dialog-tabs button { border: 0; border-radius: 999px; background: transparent; color: inherit; padding: 7px 16px; font-size: .74rem; font-weight: 800; cursor: pointer; }
 .racquet-dialog-tabs button.active { background: var(--forest); color: var(--paper); }
+.racquet-dialog-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .racquet-dialog-compare { border: 1px solid var(--line); border-radius: 999px; background: transparent; color: inherit; padding: 7px 14px; font-size: .72rem; font-weight: 800; cursor: pointer; }
 .racquet-dialog-compare.on { border-color: var(--forest); }
 .racquet-dialog-compare:disabled { opacity: .5; cursor: not-allowed; }
