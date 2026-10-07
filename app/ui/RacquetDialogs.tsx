@@ -26,7 +26,7 @@ export function ImagePreviewDialog({ modelKey, modelName, spec, onClose }: { mod
       <div className="image-preview-copy">
         <span>{modelBrand(modelKey)}</span>
         <h2 id="image-preview-title">{modelName}</h2>
-        <p>{pending ? "A model-specific photo is still being verified. Baseline will not substitute another racquet’s photo." : spec?.imageUrl?.startsWith("https://") ? "Current photo supplied by the verified product source." : "Model-specific catalogue photo."}</p>
+        <p>{pending ? "A model-specific photo is still being verified. Baseline will not substitute another racquet’s photo." : spec?.imageSource ? `Photo from ${spec.imageSource}’s product listing.` : spec?.imageUrl?.startsWith("https://") ? "Current photo supplied by the verified product source." : "Model-specific catalogue photo."}</p>
         {spec?.sourceUrl && <a href={spec.sourceUrl} target="_blank" rel="noreferrer">Open specification source ↗</a>}
       </div>
     </section>

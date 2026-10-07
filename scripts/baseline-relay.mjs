@@ -377,6 +377,7 @@ async function dashboardWithLivePrices() {
     }));
     dashboard.usedSourceResults = state.usedSourceResults ?? [];
     dashboard.racquetSpecs = state.racquetSpecs ?? dashboard.racquetSpecs ?? {};
+    dashboard.retailerPhotos = state.retailerPhotos ?? {};
     dashboard.specValidation = state.specValidation ?? {};
     dashboard.manufacturerSpecResults = state.manufacturerSpecResults ?? [];
     dashboard.modelSelectionRefreshes = state.modelSelectionRefreshes ?? {};

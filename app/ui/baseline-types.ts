@@ -68,6 +68,8 @@ export type Dashboard = {
   publicPreview?: boolean;
   /** Retailers whose links currently earn a commission (set by the relay). */
   affiliateRetailers?: string[];
+  /** A listing photo per racquet, for racquets without a manufacturer photo (set by the relay). */
+  retailerPhotos?: Record<string, { url: string; store: string; pageUrl?: string }>;
   offers: Offer[];
   saleOffers: Offer[];
   specialOffers?: Offer[];
@@ -185,6 +187,8 @@ export type RacquetSpec = {
   tension?: string;
   productCode?: string;
   imageUrl?: string;
+  /** Set when the photo comes from a retailer's listing rather than the manufacturer. */
+  imageSource?: string;
   gripSizes?: string;
   color?: string;
   madeIn?: string;

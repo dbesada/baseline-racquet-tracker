@@ -1,6 +1,7 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { classify, classifyUsed, isAccessory, parseAmazonPrice, decodeHtmlAttribute, productJsonLd, jsonLdOffer } from "../app/lib/catalog-matching.js";
 import { defaultTargets, modelNames } from "../app/lib/racquet-catalogue.js";
+import { listingPhoto, pickRetailerPhotos } from "../app/lib/retailer-photos.js";
 
 const nativeFetch = globalThis.fetch.bind(globalThis);
 const transientHttpStatuses = new Set([408, 425, 429, 500, 502, 503, 504]);
@@ -1485,6 +1486,7 @@ async function fetchStore([store, origin, url, kind]) {
       if (modelKey === "other-sale" && !specialEditionName(productName) && saleVariants.length === 0) return [];
       const comparePrices = group.map(({ variant }) => Number(variant.compare_at_price)).filter(Number.isFinite);
       const variantLabel = group[0]?.variant.title?.split(" / ")[0];
+      const photo = listingPhoto(product, group[0]?.variant, origin, Boolean(specialEditionName(productName)));
       return [{
       id: `${store}:${product.handle}:${modelKey}`,
       modelKey,
@@ -1495,6 +1497,7 @@ async function fetchStore([store, origin, url, kind]) {
       url: `${origin}/products/${product.handle}`,
       specs: extractRacquetSpecs(`${productName} ${group.map(({ variant }) => `${variant.title ?? ""} ${variant.sku ?? ""}`).join(" ")} ${product.body_html ?? ""}`, store === "Babolat Canada" ? "Babolat official" : store, `${origin}/products/${product.handle}`),
       gripSizes: [...new Set(group.flatMap(({ gripSizes }) => gripSizes))],
+      ...(photo ? { imageUrl: photo } : {}),
     }];
     });
   });
@@ -1892,6 +1895,8 @@ await writeFile(statePath, JSON.stringify({
   checkedAt,
   gripSize: targetGripSize,
   offers: current,
+  // Listing photos for racquets without a manufacturer photo (shown with the shop's name).
+  retailerPhotos: pickRetailerPhotos(offers),
   belowTarget: belowTarget.map((offer) => offer.id),
   retailerResults,
   dropHistory,
