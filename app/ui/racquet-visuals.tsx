@@ -12,8 +12,9 @@ export function PatternBadge({ pattern, compact = false }: { pattern?: string; c
   </span>;
 }
 
-// A racquet photo that opens the larger preview when clicked.
-export function RacquetImage({ modelKey, spec, className, width, height, alt, sizes, onPreview }: {
+// A racquet photo. On cards it opens the racquet's details pop-up
+// (action "details"); inside that pop-up it opens the larger photo.
+export function RacquetImage({ modelKey, spec, className, width, height, alt, sizes, onPreview, action = "photo" }: {
   modelKey: string;
   spec?: RacquetSpec;
   className: string;
@@ -22,11 +23,18 @@ export function RacquetImage({ modelKey, spec, className, width, height, alt, si
   alt: string;
   sizes?: string;
   onPreview: (modelKey: string) => void;
+  action?: "photo" | "details";
 }) {
   const src = modelImage(modelKey, spec?.imageUrl);
   const pending = src.includes("racquet-photo-pending.svg");
-  return <button type="button" className={`${className} image-preview-trigger`} onClick={() => onPreview(modelKey)} aria-label={`View larger photo of ${alt}`} title={pending ? "Photo is being verified" : `View ${alt} photo`}>
+  const details = action === "details";
+  return <button type="button" className={`${className} image-preview-trigger`} onClick={() => onPreview(modelKey)} aria-label={details ? `View specs and prices for ${alt}` : `View larger photo of ${alt}`} title={details ? "Specs & prices" : pending ? "Photo is being verified" : `View ${alt} photo`}>
     <Image src={src} alt={alt} width={width} height={height} sizes={sizes} unoptimized />
-    <span className="image-preview-hint">{pending ? "Photo pending" : "View photo"}</span>
+    <span className="image-preview-hint">{details ? "Specs & prices" : pending ? "Photo pending" : "View photo"}</span>
   </button>;
+}
+
+// A racquet name that opens its details pop-up.
+export function RacquetName({ modelKey, name, onOpen }: { modelKey: string; name: string; onOpen: (modelKey: string) => void }) {
+  return <button type="button" className="racquet-name-button" onClick={() => onOpen(modelKey)} title="Specs & prices">{name}</button>;
 }

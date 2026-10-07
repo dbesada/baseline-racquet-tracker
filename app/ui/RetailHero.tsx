@@ -5,9 +5,9 @@ import { AffiliateNote } from "./AffiliateNote";
 import type { Dashboard, OpportunityMode, RacquetSpec } from "./baseline-types";
 import { money, outboundHref, outboundRel, relativeTime } from "./baseline-catalogue";
 import type { Opportunity } from "./dashboard-insights";
-import { PatternBadge } from "./racquet-visuals";
+import { PatternBadge, RacquetName } from "./racquet-visuals";
 
-export function RetailHero({ data, loading, checking, error, opportunities, opportunityMode, specs, onCheckNow, onOpportunityModeChange, onShowRetailers }: {
+export function RetailHero({ data, loading, checking, error, opportunities, opportunityMode, specs, onCheckNow, onOpportunityModeChange, onShowRetailers, onOpenRacquet }: {
   data: Dashboard | null;
   loading: boolean;
   checking: boolean;
@@ -18,6 +18,7 @@ export function RetailHero({ data, loading, checking, error, opportunities, oppo
   onCheckNow: () => void;
   onOpportunityModeChange: (mode: OpportunityMode) => void;
   onShowRetailers: (modelKey: string) => void;
+  onOpenRacquet: (modelKey: string) => void;
 }) {
   const selected = opportunities.find((choice) => choice.mode === opportunityMode) ?? opportunities[0] ?? null;
   return (
@@ -44,7 +45,7 @@ export function RetailHero({ data, loading, checking, error, opportunities, oppo
             {opportunities.map((choice) => <button key={choice.mode} className={selected?.mode === choice.mode ? "active" : ""} onClick={() => onOpportunityModeChange(choice.mode)}>{choice.label}</button>)}
           </div>
           {selected ? <>
-            <strong className="opportunity-model">{data?.modelNames[selected.offer.modelKey] ?? selected.offer.title}</strong>
+            <strong className="opportunity-model"><RacquetName modelKey={selected.offer.modelKey} name={data?.modelNames[selected.offer.modelKey] ?? selected.offer.title} onOpen={onOpenRacquet} /></strong>
             <div className="opportunity-price">
               <strong>{money.format(selected.offer.currentPrice ?? 0)}</strong>
               <span>at {selected.offer.store}</span>

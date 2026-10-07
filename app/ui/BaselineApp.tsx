@@ -24,7 +24,7 @@ import { BallMarket, useBallMarket } from "./BallMarket";
 import { catalogueMetrics as computeCatalogueMetrics, coachModels as computeCoachModels, marketplaceHealth as computeMarketplaceHealth, opportunityChoices as computeOpportunityChoices, resolveRacquetSpecs } from "./dashboard-insights";
 import { RacquetGuide, StringGuide } from "./EquipmentGuides";
 import { RacquetBrowser, useRacquetCatalogue, type RacquetCardContext } from "./RacquetBrowser";
-import { CompareTray, ComparisonDialog, ImagePreviewDialog, RetailerDialog } from "./RacquetDialogs";
+import { CompareTray, ComparisonDialog, ImagePreviewDialog, RetailerDialog, type RacquetDialogTab } from "./RacquetDialogs";
 import { RetailHero, SourceHealth } from "./RetailHero";
 import { SettingsPanel, type InstallContext } from "./SettingsPanel";
 import { SpecialEditionMarket, useSpecialEditions } from "./SpecialEditionMarket";
@@ -75,6 +75,7 @@ export function BaselineApp() {
   const [comparisonOpen, setComparisonOpen] = useState(false);
   const [retailerModelKey, setRetailerModelKey] = useState<string | null>(null);
   const [imagePreviewKey, setImagePreviewKey] = useState<string | null>(null);
+  const [racquetTab, setRacquetTab] = useState<RacquetDialogTab>("specs");
   const [opportunityMode, setOpportunityMode] = useState<OpportunityMode>("target");
 
   const resolvedRacquetSpecs = useMemo(() => resolveRacquetSpecs(data), [data]);
@@ -153,8 +154,9 @@ export function BaselineApp() {
   }, [activeMarket, data?.publicPreview, trackAnalytics]);
 
   useEffect(() => {
-    if (data?.publicPreview && retailerModelKey) trackAnalytics("retailer_open");
-  }, [data?.publicPreview, retailerModelKey, trackAnalytics]);
+    // Counts store comparisons only, as before; opening a racquet's specs is not one.
+    if (data?.publicPreview && retailerModelKey && racquetTab === "retailers") trackAnalytics("retailer_open");
+  }, [data?.publicPreview, retailerModelKey, racquetTab, trackAnalytics]);
 
   useEffect(() => {
     if (data?.publicPreview && comparisonOpen) trackAnalytics("comparison_open");
@@ -392,6 +394,10 @@ export function BaselineApp() {
     window.requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: "smooth" }));
   };
 
+  // A racquet's name or photo opens its specs; "Browse every retailer" opens its prices.
+  const openRacquet = (modelKey: string) => { setRacquetTab("specs"); setRetailerModelKey(modelKey); };
+  const showRetailers = (modelKey: string) => { setRacquetTab("retailers"); setRetailerModelKey(modelKey); };
+
   const toggleCompare = (modelKey: string) => {
     const isAdding = !compareKeys.includes(modelKey) && compareKeys.length < maxCompareFrames;
     if (isAdding) void refreshSelectedModel(modelKey);
@@ -418,8 +424,8 @@ export function BaselineApp() {
     targetEditor,
     onToggleCompare: toggleCompare,
     onDealOpen: () => trackAnalytics("deal_open"),
-    onShowRetailers: setRetailerModelKey,
-    onPreviewImage: setImagePreviewKey,
+    onShowRetailers: showRetailers,
+    onOpenRacquet: openRacquet,
   };
   const racquetBrandActive = activeBrand === "catalogue" || brandList.includes(activeBrand as Exclude<BrandKey, "all">);
   const affiliateLinksOn = hasAffiliateLinks(data);
@@ -481,7 +487,8 @@ export function BaselineApp() {
         specs={resolvedRacquetSpecs}
         onCheckNow={checkNow}
         onOpportunityModeChange={setOpportunityMode}
-        onShowRetailers={setRetailerModelKey}
+        onShowRetailers={showRetailers}
+        onOpenRacquet={openRacquet}
       />
 
       <section className="watchlist" id="browse-market">
@@ -519,7 +526,7 @@ export function BaselineApp() {
           : activeBrand === "strings" ? <StringMarket market={stringMarket} loading={loading} />
           : activeBrand === "balls" ? <BallMarket market={ballMarket} loading={loading} />
           : activeBrand === "accessories" ? <AccessoryMarket market={accessoryMarket} loading={loading} />
-          : activeBrand === "special" ? <SpecialEditionMarket market={specialEditions} gripSize={data?.gripSize ?? "L3"} loading={loading} specs={resolvedRacquetSpecs} onPreviewImage={setImagePreviewKey} />
+          : activeBrand === "special" ? <SpecialEditionMarket market={specialEditions} gripSize={data?.gripSize ?? "L3"} loading={loading} specs={resolvedRacquetSpecs} onOpenRacquet={openRacquet} />
           : <RacquetBrowser
             catalogue={catalogue}
             cards={racquetCards}
@@ -546,7 +553,7 @@ export function BaselineApp() {
         targetEditor={targetEditor}
         onCheckNow={checkNow}
         onGripSizeChange={changeGripSize}
-        onPreviewImage={setImagePreviewKey}
+        onOpenRacquet={openRacquet}
       />}
 
       <nav className="mobile-dock" aria-label="Quick navigation">
@@ -568,6 +575,11 @@ export function BaselineApp() {
         data={data}
         offers={retailerModelOffers}
         spec={resolvedRacquetSpecs[retailerModelKey]}
+        tab={racquetTab}
+        compared={compareKeys.includes(retailerModelKey)}
+        compareFull={compareKeys.length >= maxCompareFrames}
+        onTabChange={setRacquetTab}
+        onToggleCompare={toggleCompare}
         onPreviewImage={setImagePreviewKey}
         onClose={() => setRetailerModelKey(null)}
       />}
