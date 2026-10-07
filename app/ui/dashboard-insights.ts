@@ -3,7 +3,7 @@
 
 import type { CoachModel } from "./BaselineCoach";
 import type { CatalogueMetric, Dashboard, Offer, OpportunityMode, RacquetSpec } from "./baseline-types";
-import { freshnessRank, isManufacturerSpec, manufacturerPublishedSpecs, modelBrand, notablePlayerFor, outboundHref, publishedStiffness, racquetSpecs, reportedTourPresence } from "./baseline-catalogue";
+import { freshnessRank, isManufacturerSpec, manufacturerPublishedSpecs, modelBrand, modelImages, notablePlayerFor, outboundHref, publishedStiffness, racquetSpecs, reportedTourPresence } from "./baseline-catalogue";
 
 // Merges the built-in catalogue specs with what the latest check verified:
 // manufacturer specs first, then retailer consensus and corrections.
@@ -58,6 +58,13 @@ export function resolveRacquetSpecs(data: Dashboard | null) {
       stiffness: existing.stiffness ?? publishedStiffness[model.key],
       notablePlayer: notablePlayerFor(model.key),
     };
+  }
+  // A retailer's listing photo fills in only where there is no manufacturer
+  // photo and no catalogue photo, and is credited to the shop.
+  for (const [modelKey, photo] of Object.entries(data?.retailerPhotos ?? {})) {
+    const existing = resolved[modelKey] ?? {};
+    if (existing.imageUrl?.startsWith("https://") || modelImages[modelKey] || !photo?.url?.startsWith("https://")) continue;
+    resolved[modelKey] = { ...existing, imageUrl: photo.url, imageSource: photo.store };
   }
   return resolved;
 }
