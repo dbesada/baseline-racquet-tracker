@@ -30,6 +30,10 @@ export const glossary = {
     title: "Your target price",
     text: "The price you’d be happy to pay. When the best price drops to it or below, the card shows “Target hit”, and alerts (if on) tell you after the next check.",
   },
+  prestrung: {
+    title: "Pre-strung or unstrung",
+    text: "Pre-strung racquets come with strings and are ready to play. Most are lighter starter or casual frames. Unstrung racquets are the frames regular players buy: a shop fits the strings you choose, usually for an extra fee.",
+  },
   fit: {
     title: "Who it suits",
     text: "A starting point worked out from head size and weight only. Feel matters too, so try a demo racquet if a store offers one, or ask Baseline Coach for a fuller match.",

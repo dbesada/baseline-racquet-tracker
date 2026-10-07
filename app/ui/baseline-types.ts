@@ -16,6 +16,10 @@ export type Offer = {
   currency?: "CAD" | "USD";
   specs?: RacquetSpec | null;
   sourceState?: "fresh" | "stale";
+  /** Sale-rack offers only: the shop listing photo, when there is one. */
+  imageUrl?: string;
+  /** Sale-rack offers only: sold with strings, ready to play. */
+  preStrung?: boolean;
 };
 
 export type StringOffer = {

@@ -1,9 +1,10 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { BrandViewKey, CatalogueMetric, CatalogueSort, Dashboard, GripSize, HeadSizeFilter, PatternFilter, RacquetSpec, TargetEditor, WeightFilter } from "./baseline-types";
 import { accents, cataloguePageSize, featuredByBrand, gripOptions, matchesCatalogueFilters, maxCompareFrames, modelBrand, money, outboundHref, outboundRel, relativeTime, sortCatalogueKeys, specNumber, uniqueRetailerOffers, validationPresentation } from "./baseline-catalogue";
 import { CardSpecs, PatternBadge, PlayerFit, RacquetImage, RacquetName } from "./racquet-visuals";
+import { SaleRack } from "./SaleRack";
 import { TermHelp } from "./TermTip";
 
 // Browse views that are not racquet lists.
@@ -97,15 +98,29 @@ export function RacquetBrowser({ catalogue, cards, modelFetch, onGripSizeChange 
   onGripSizeChange: (gripSize: GripSize) => void;
 }) {
   const { data, loading, activeBrand } = cards;
-  const { featuredModelKeys, visibleFeaturedModelKeys, suggestedModelKeys, saleOffers } = catalogue;
+  const { featuredModelKeys, visibleFeaturedModelKeys, suggestedModelKeys, saleOffers, setVisibleCount } = catalogue;
+  // The full racquet list loads the next page as the visitor nears its end;
+  // the "Show 24 more" button stays as a fallback.
+  const moreButton = useRef<HTMLButtonElement>(null);
+  const shownCount = visibleFeaturedModelKeys.length;
+  const hasMore = activeBrand === "catalogue" && shownCount < featuredModelKeys.length;
+  useEffect(() => {
+    const button = moreButton.current;
+    if (!hasMore || !button || typeof IntersectionObserver === "undefined") return;
+    const observer = new IntersectionObserver((entries) => {
+      if (entries.some((entry) => entry.isIntersecting)) setVisibleCount((count) => Math.max(count, shownCount + cataloguePageSize));
+    }, { rootMargin: "0px 0px 600px 0px" });
+    observer.observe(button);
+    return () => observer.disconnect();
+  }, [hasMore, shownCount, setVisibleCount]);
   return <>
     {activeBrand === "catalogue" && <CatalogueControls catalogue={catalogue} data={data} modelFetch={modelFetch} onGripSizeChange={onGripSizeChange} />}
 
     <div className="model-grid">
       {visibleFeaturedModelKeys.map((modelKey, index) => <ModelCard modelKey={modelKey} index={index} featured={activeBrand !== "all" && activeBrand !== "catalogue"} cards={cards} key={`${modelKey}-${index}`} />)}
     </div>
-    {activeBrand === "catalogue" && visibleFeaturedModelKeys.length < featuredModelKeys.length && (
-      <button className="catalogue-more" onClick={() => catalogue.setVisibleCount((count) => count + cataloguePageSize)}>
+    {hasMore && (
+      <button ref={moreButton} className="catalogue-more" onClick={() => catalogue.setVisibleCount((count) => count + cataloguePageSize)}>
         Show 24 more <span>{visibleFeaturedModelKeys.length} of {featuredModelKeys.length} shown</span>
       </button>
     )}
@@ -123,26 +138,14 @@ export function RacquetBrowser({ catalogue, cards, modelFetch, onGripSizeChange 
       </section>
     )}
 
-    {activeBrand !== "catalogue" && !nonRacquetViews.includes(activeBrand) && <div className="sale-section">
-      <div className="sale-heading">
-        <div>
-          <p className="eyebrow">{activeBrand === "all" ? "THE REST OF THE SALE RACK" : `${activeBrand.toUpperCase()} DEALS`}</p>
-          <h2>{activeBrand === "all" ? "Other racquets on sale." : `More ${activeBrand} racquets on sale.`}</h2>
-        </div>
-        <span className="sale-note">Your grip ({data?.gripSize ?? "L3"}) · new · in stock</span>
-      </div>
-      <div className="sale-grid">
-        {saleOffers.map((offer) => (
-          <a className="sale-offer" href={outboundHref(offer.id)} target="_blank" rel={outboundRel} key={offer.id}>
-            <span className="sale-store">{offer.store}</span>
-            <strong>{offer.title}</strong>
-            <span className="sale-prices"><b>{money.format(offer.currentPrice ?? 0)}</b><del>{offer.compareAtPrice != null ? money.format(offer.compareAtPrice) : ""}</del><i>↓ {offer.compareAtPrice && offer.currentPrice ? Math.round((1 - offer.currentPrice / offer.compareAtPrice) * 100) : 0}%</i></span>
-            <span className="arrow" aria-hidden="true">↗</span>
-          </a>
-        ))}
-      </div>
-      {!loading && !saleOffers.length && <p className="empty sale-empty">No additional {data?.gripSize ?? "L3"} sale frames match the selected specs.</p>}
-    </div>}
+    {activeBrand !== "catalogue" && !nonRacquetViews.includes(activeBrand) && <SaleRack
+      key={activeBrand}
+      offers={saleOffers}
+      loading={loading}
+      gripSize={data?.gripSize ?? "L3"}
+      eyebrow={activeBrand === "all" ? "THE REST OF THE SALE RACK" : `${activeBrand.toUpperCase()} DEALS`}
+      title={activeBrand === "all" ? "Other racquets on sale." : `More ${activeBrand} racquets on sale.`}
+    />}
   </>;
 }
 

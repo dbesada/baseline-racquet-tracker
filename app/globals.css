@@ -1367,3 +1367,30 @@ select:disabled { color: #596760; opacity: .72; }
   .coach-launch { padding: 5px 14px 5px 5px; }
   .coach-launch-short { display: block; font-size: .78rem; font-weight: 800; }
 }
+
+/* Sale rack: photo, cleaner name, pre-strung tag, saving, and a pre-strung / unstrung filter. */
+.sale-offer { flex-direction: row; justify-content: flex-start; align-items: stretch; gap: 14px; }
+.sale-photo { flex: 0 0 72px; display: grid; place-items: center; align-self: center; height: 96px; border-radius: 10px; background: white; overflow: hidden; }
+.sale-photo img { width: 100%; height: 100%; object-fit: contain; }
+.sale-body { min-width: 0; flex: 1 1 auto; display: flex; flex-direction: column; gap: 7px; padding-right: 18px; }
+.sale-body strong { max-width: none; }
+.sale-body .sale-prices { margin-top: auto; }
+.sale-tag { width: fit-content; padding: 3px 8px; border-radius: 999px; background: color-mix(in srgb, var(--lime) 45%, transparent); color: var(--ink); font-size: .6rem; font-weight: 800; }
+.sale-saving { color: #238256; font-size: .66rem; font-weight: 800; }
+.sale-filters { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: -10px 0 18px; }
+.sale-filters button:not(.term-help) { border: 1px solid var(--line); border-radius: 999px; padding: 8px 14px; background: transparent; color: var(--muted); font: inherit; font-size: .72rem; font-weight: 750; cursor: pointer; }
+.sale-filters button:not(.term-help) span { margin-left: 4px; opacity: .7; font-weight: 650; }
+.sale-filters button:hover { color: var(--ink); }
+.sale-filters button.active { border-color: var(--ink); background: var(--ink); color: var(--paper); }
+
+@media (prefers-color-scheme: dark) {
+  .sale-photo { background: #f5f7f8; }
+  .sale-tag { background: color-mix(in srgb, var(--lime) 22%, transparent); color: #f5f7f8; }
+  .sale-saving { color: #8ee3b5; }
+}
+
+@media (max-width: 620px) {
+  .sale-filters { margin-top: 0; }
+  .sale-filters button:not(.term-help) { flex: 1 1 auto; }
+  .sale-photo { flex-basis: 64px; height: 86px; }
+}

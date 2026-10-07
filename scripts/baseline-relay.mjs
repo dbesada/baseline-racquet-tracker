@@ -7,6 +7,7 @@ import { createAccessVerifier, isAdminRequest, parseLoginList } from "./access-c
 import { loadAffiliateLinks } from "./affiliate-links.mjs";
 import { createAuditLog } from "./audit-log.mjs";
 import { readClickRows, weeklyRetailerClicks } from "./click-report.mjs";
+import { pickSaleOffers } from "../app/lib/sale-rack.js";
 import { createOutboundRedirect, marketFrom } from "./outbound-redirect.mjs";
 import { settingsAfterChange, settingsSnapshot } from "./persistent-settings.mjs";
 
@@ -279,10 +280,10 @@ async function dashboardWithLivePrices() {
       if (!current || offer.currentPrice < current.currentPrice) bestByModel.set(offer.modelKey, offer);
     }
     dashboard.offers = offers;
-    dashboard.saleOffers = offers
-      .filter((offer) => offer.modelKey === "other-sale" && offer.compareAtPrice > offer.currentPrice)
-      .sort((a, b) => a.currentPrice - b.currentPrice)
-      .slice(0, 18);
+    // Sale cards also show the listing photo (https only), when the shop has one.
+    const salePhotos = new Map(cached.filter((offer) => /^https:\/\//.test(offer.imageUrl ?? "")).map((offer) => [offer.id, offer.imageUrl]));
+    dashboard.saleOffers = pickSaleOffers(offers)
+      .map((offer) => salePhotos.has(offer.id) ? { ...offer, imageUrl: salePhotos.get(offer.id) } : offer);
     dashboard.specialOffers = (state.specialOffers ?? []).map((offer) => ({
       id: offer.id,
       modelKey: offer.modelKey,
