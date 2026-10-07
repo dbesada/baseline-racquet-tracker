@@ -19,6 +19,7 @@ import {
 import { AccessoryMarket, useAccessoryMarket } from "./AccessoryMarket";
 import { affiliateDisclosurePath, hasAffiliateLinks } from "./affiliate-disclosure";
 import { AffiliateNote } from "./AffiliateNote";
+import { racquetHash, racquetKeyFromHash } from "./racquet-link";
 import { AnalyticsPanel } from "./AnalyticsPanel";
 import { BallMarket, useBallMarket } from "./BallMarket";
 import { catalogueMetrics as computeCatalogueMetrics, coachModels as computeCoachModels, marketplaceHealth as computeMarketplaceHealth, opportunityChoices as computeOpportunityChoices, resolveRacquetSpecs } from "./dashboard-insights";
@@ -192,6 +193,29 @@ export function BaselineApp() {
     const closeOnEscape = (event: KeyboardEvent) => { if (event.key === "Escape") setRetailerModelKey(null); };
     window.addEventListener("keydown", closeOnEscape);
     return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [retailerModelKey]);
+
+  // Each racquet has a shareable link (#racquet-<model key>) that opens its
+  // specs. The address follows the open pop-up so it can be copied or shared.
+  const modelNames = data?.modelNames;
+  useEffect(() => {
+    const openFromLink = () => {
+      const modelKey = racquetKeyFromHash(window.location.hash);
+      if (modelKey && modelNames?.[modelKey]) { setRacquetTab("specs"); setRetailerModelKey(modelKey); }
+    };
+    openFromLink();
+    window.addEventListener("hashchange", openFromLink);
+    return () => window.removeEventListener("hashchange", openFromLink);
+  }, [modelNames]);
+
+  const linkedRacquet = useRef<string | null>(null);
+  useEffect(() => {
+    if (retailerModelKey) {
+      if (window.location.hash !== racquetHash(retailerModelKey)) window.history.replaceState(null, "", racquetHash(retailerModelKey));
+    } else if (linkedRacquet.current && racquetKeyFromHash(window.location.hash)) {
+      window.history.replaceState(null, "", window.location.pathname + window.location.search);
+    }
+    linkedRacquet.current = retailerModelKey;
   }, [retailerModelKey]);
 
   const installBaseline = async () => {
