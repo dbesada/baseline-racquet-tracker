@@ -2,8 +2,9 @@
 
 import { useCallback, useMemo, useState } from "react";
 import type { BrandViewKey, CatalogueMetric, CatalogueSort, Dashboard, GripSize, HeadSizeFilter, PatternFilter, RacquetSpec, TargetEditor, WeightFilter } from "./baseline-types";
-import { accents, cataloguePageSize, featuredByBrand, gripOptions, matchesCatalogueFilters, maxCompareFrames, modelBrand, money, outboundHref, outboundRel, relativeTime, sortCatalogueKeys, specNumber, standardizedSpecDisplay, uniqueRetailerOffers, validationPresentation } from "./baseline-catalogue";
-import { PatternBadge, RacquetImage, RacquetName } from "./racquet-visuals";
+import { accents, cataloguePageSize, featuredByBrand, gripOptions, matchesCatalogueFilters, maxCompareFrames, modelBrand, money, outboundHref, outboundRel, relativeTime, sortCatalogueKeys, specNumber, uniqueRetailerOffers, validationPresentation } from "./baseline-catalogue";
+import { CardSpecs, PatternBadge, PlayerFit, RacquetImage, RacquetName } from "./racquet-visuals";
+import { TermHelp } from "./TermTip";
 
 // Browse views that are not racquet lists.
 const nonRacquetViews: BrandViewKey[] = ["special", "strings", "balls", "accessories", "guide", "string-guide"];
@@ -126,9 +127,9 @@ export function RacquetBrowser({ catalogue, cards, modelFetch, onGripSizeChange 
       <div className="sale-heading">
         <div>
           <p className="eyebrow">{activeBrand === "all" ? "THE REST OF THE SALE RACK" : `${activeBrand.toUpperCase()} DEALS`}</p>
-          <h2>{activeBrand === "all" ? "Other frames worth a look." : `More ${activeBrand} prices worth a look.`}</h2>
+          <h2>{activeBrand === "all" ? "Other racquets on sale." : `More ${activeBrand} racquets on sale.`}</h2>
         </div>
-        <span className="sale-note">{data?.gripSize ?? "L3"} only · new · in stock</span>
+        <span className="sale-note">Your grip ({data?.gripSize ?? "L3"}) · new · in stock</span>
       </div>
       <div className="sale-grid">
         {saleOffers.map((offer) => (
@@ -162,7 +163,7 @@ function CatalogueControls({ catalogue, data, modelFetch, onGripSizeChange }: {
       <label><span>Head size</span><select value={headSizeFilter} onChange={(event) => { catalogue.setHeadSizeFilter(event.target.value as HeadSizeFilter); resetPaging(); }}>
         <option value="all">Any head size</option>{catalogue.availableHeadSizes.map((size) => <option value={String(size)} key={`head-${size}`}>{size} in²</option>)}
       </select></label>
-      <label><span>Grip size</span><select value={data?.gripSize ?? "L3"} onChange={(event) => onGripSizeChange(event.target.value as GripSize)}>
+      <label htmlFor="catalogue-grip"><span>Grip size <TermHelp term="grip" label="How to find your grip size" /></span><select id="catalogue-grip" value={data?.gripSize ?? "L3"} onChange={(event) => onGripSizeChange(event.target.value as GripSize)}>
         {gripOptions.map((option) => <option value={option.key} key={`filter-${option.key}`}>{option.key} — {option.inches}</option>)}
       </select></label>
       <label><span>Unstrung weight</span><select value={weightFilter} onChange={(event) => { catalogue.setWeightFilter(event.target.value as WeightFilter); resetPaging(); }}>
@@ -218,7 +219,7 @@ function ModelCard({ modelKey, index, featured, cards }: { modelKey: string; ind
         </div>
       </div>
       <div className="model-identity">
-        <div><span className="brand-kicker">{modelBrand(modelKey)}</span><h3><RacquetName modelKey={modelKey} name={data?.modelNames[modelKey] ?? modelKey} onOpen={cards.onOpenRacquet} /></h3>{spec && <span className="card-specs">{[standardizedSpecDisplay("head", spec.head, false), standardizedSpecDisplay("weight", spec.weight, false), spec.stiffness].filter(Boolean).join(" · ")}</span>}<PatternBadge pattern={spec?.pattern} />{cards.refreshingModels.has(modelKey) && <span className="model-refresh-state" role="status"><i />Refreshing specs &amp; photo…</span>}{activeBrand === "catalogue" && <span className="card-spec-source"><span>Specs: {spec?.source ?? "Catalogue fallback"}</span><i className={`spec-validation ${validation.tone}`}>{validation.label}</i></span>}</div>
+        <div><span className="brand-kicker">{modelBrand(modelKey)}</span><h3><RacquetName modelKey={modelKey} name={data?.modelNames[modelKey] ?? modelKey} onOpen={cards.onOpenRacquet} /></h3>{spec && <CardSpecs spec={spec} />}<PatternBadge pattern={spec?.pattern} /><PlayerFit spec={spec} />{cards.refreshingModels.has(modelKey) && <span className="model-refresh-state" role="status"><i />Refreshing specs &amp; photo…</span>}{activeBrand === "catalogue" && <span className="card-spec-source"><span>Specs: {spec?.source ?? "Catalogue fallback"}</span><i className={`spec-validation ${validation.tone}`}>{validation.label}</i></span>}</div>
         <RacquetImage modelKey={modelKey} spec={spec} className="model-thumbnail" width={122} height={158} alt={`${data?.modelNames[modelKey] ?? modelKey} racquet`} sizes="122px" onPreview={cards.onOpenRacquet} action="details" />
       </div>
       <div className="price-row">
@@ -228,7 +229,7 @@ function ModelCard({ modelKey, index, featured, cards }: { modelKey: string; ind
         </div>
       </div>
       <div className="target-row">
-        <span>Alert me under</span>
+        <span>Target price <TermHelp term={data?.publicPreview === false ? "target-admin" : "target-public"} label="What is a target price?" /></span>
         {targetEditor.editingKey === modelKey ? (
           <form onSubmit={(event) => { event.preventDefault(); targetEditor.save(modelKey); }}>
             <label><span>$</span><input autoFocus inputMode="decimal" value={targetEditor.draft} onChange={(event) => targetEditor.setDraft(event.target.value)} aria-label="Target price in Canadian dollars" /></label>
@@ -246,7 +247,7 @@ function ModelCard({ modelKey, index, featured, cards }: { modelKey: string; ind
         }) : <p className="empty">{release?.releaseStatus === "preorder" ? "No Canadian pre-order match found yet. Baseline will keep checking." : "No in-stock match found today."}</p>}
       </div>
       {available.length > 0 && <button className="all-retailers-button" onClick={() => cards.onShowRetailers(modelKey)}>
-        <span>Browse every retailer</span><strong>{available.length} {available.length === 1 ? "store" : "stores"}</strong><i aria-hidden="true">→</i>
+        <span>Compare every store</span><strong>{available.length} {available.length === 1 ? "store" : "stores"}</strong><i aria-hidden="true">→</i>
       </button>}
     </article>
   );

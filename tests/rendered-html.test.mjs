@@ -33,7 +33,7 @@ test("ships the finished Baseline tracker and its price API", async () => {
   assert.ok(Object.values(modelNames).includes("Head Speed Pro 2026"));
   assert.match(ui, /YOUR TOP FRAMES/);
   assert.match(ui, /Top-rated & available/);
-  assert.match(ui, /Six frames/);
+  assert.match(ui, /Six racquets, best Canadian prices/);
   assert.match(ui, /BEST PRICE FINDER/);
   assert.match(ui, /Best opportunity right now/);
   assert.match(ui, /View deal/);
@@ -155,7 +155,7 @@ test("ships the finished Baseline tracker and its price API", async () => {
   assert.match(ui, /Lowest live price/);
   assert.match(ui, /Aim to pay under/);
   assert.match(ui, /Verified live listings/);
-  assert.match(ui, /Browse every retailer/);
+  assert.match(ui, /Compare every store/);
   assert.match(ui, /uniqueRetailerOffers/);
   assert.match(ui, /BEST PRICE FINDER/);
   assert.match(ui, /Best deal/);
@@ -168,7 +168,7 @@ test("ships the finished Baseline tracker and its price API", async () => {
   assert.match(styles, /\.pattern-open/);
   assert.match(styles, /\.pattern-dense/);
   assert.match(ui, /VERY OPEN/);
-  assert.match(ui, /PARTIAL SCAN/);
+  assert.match(ui, /Some stores still updating/);
   assert.match(ui, /baseline-public-preferences-v1/);
   assert.match(ui, /Public beta/);
   assert.match(ui, /They are saved only in this browser/);

@@ -7,7 +7,8 @@ import { AffiliateNote } from "./AffiliateNote";
 import type { Dashboard, Offer, RacquetSpec } from "./baseline-types";
 import { maxCompareFrames, modelBrand, modelImage, money, outboundHref, outboundRel, patternPresentation, relativeTime, standardizedSpecDisplay, validationPresentation } from "./baseline-catalogue";
 import { racquetHash } from "./racquet-link";
-import { PatternBadge, RacquetImage } from "./racquet-visuals";
+import { PatternBadge, PlayerFit, RacquetImage } from "./racquet-visuals";
+import { TermHelp, type GlossaryTerm } from "./TermTip";
 
 const comparisonRows: Array<[string, keyof RacquetSpec]> = [
   ["Head size", "head"], ["Length", "length"], ["Unstrung weight", "weight"], ["Strung weight", "strungWeight"], ["Unstrung balance", "balance"], ["Strung balance", "strungBalance"], ["Swingweight", "swingweight"], ["Stiffness / flex", "stiffness"], ["Beam width", "beam"], ["Composition", "composition"], ["String pattern", "pattern"], ["Grip sizes", "gripSizes"], ["Recommended strings", "recommendedStrings"], ["Recommended tension", "tension"], ["Colour", "color"], ["Made in", "madeIn"], ["Product code", "productCode"], ["Notable player (endorsed line)", "notablePlayer"], ["Playing profile", "profile"],
@@ -40,6 +41,9 @@ function SpecValue({ field, spec }: { field: keyof RacquetSpec; spec?: RacquetSp
   if (field === "pattern") return patternPresentation(spec?.pattern) ? <PatternBadge pattern={spec?.pattern} /> : <>—</>;
   return <>{standardizedSpecDisplay(field, spec?.[field]) ?? (field === "stiffness" ? "Not published" : "—")}</>;
 }
+
+// Spec rows that have a plain-English explanation.
+const explainedRows: Partial<Record<keyof RacquetSpec, GlossaryTerm>> = { head: "head", weight: "weight", stiffness: "stiffness", gripSizes: "grip" };
 
 export type RacquetDialogTab = "specs" | "retailers";
 
@@ -94,11 +98,12 @@ export function RetailerDialog({ modelKey, data, offers, spec, tab, compared, co
         </div>
         <div id="racquet-panel" role="tabpanel" aria-labelledby={tab === "specs" ? "racquet-tab-specs" : "racquet-tab-retailers"}>
         {tab === "specs" ? <>
+          <PlayerFit spec={spec} />
           <div className="racquet-specs-layout">
           <RacquetImage modelKey={modelKey} spec={spec} className="racquet-dialog-photo" width={300} height={400} sizes="(max-width: 720px) 60vw, 300px" alt={`${modelName} racquet`} onPreview={onPreviewImage} />
           <dl className="racquet-spec-list">
             {/* One racquet: list only what is known (stiffness says when it isn't published). */}
-            {comparisonRows.filter(([, field]) => field === "stiffness" || (field === "pattern" ? patternPresentation(spec?.pattern) : standardizedSpecDisplay(field, spec?.[field]))).map(([label, field]) => <div key={field}><dt>{label}</dt><dd><SpecValue field={field} spec={spec} /></dd></div>)}
+            {comparisonRows.filter(([, field]) => field === "stiffness" || (field === "pattern" ? patternPresentation(spec?.pattern) : standardizedSpecDisplay(field, spec?.[field]))).map(([label, field]) => <div key={field}><dt>{label}{explainedRows[field] && <> <TermHelp term={explainedRows[field]} label={`What is ${label.toLowerCase()}?`} /></>}</dt><dd><SpecValue field={field} spec={spec} /></dd></div>)}
             <div><dt>Independent validation</dt><dd><span className={`spec-validation ${validation.tone}`}>{validation.label}</span></dd></div>
             <div><dt>Specification source</dt><dd>{spec?.sourceUrl ? <a className="comparison-source" href={spec.sourceUrl} target="_blank" rel="noreferrer">{spec.source ?? "Manufacturer / retailer source"} ↗</a> : (spec?.source ?? "Catalogue fallback")}</dd></div>
           </dl>

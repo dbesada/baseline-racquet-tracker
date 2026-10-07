@@ -6,7 +6,7 @@ import { AffiliateNote } from "./AffiliateNote";
 import type { Dashboard, GripSize, RacquetSpec, TargetEditor, UsedAvailability, UsedSort } from "./baseline-types";
 import { accents, gripLabel, gripOptions, money, offerMoney, outboundHref, outboundRel, relativeTime, usedMarketplaces } from "./baseline-catalogue";
 import type { MarketplaceHealth } from "./dashboard-insights";
-import { PatternBadge, RacquetImage, RacquetName } from "./racquet-visuals";
+import { CardSpecs, PatternBadge, RacquetImage, RacquetName } from "./racquet-visuals";
 import { SourceHealth } from "./RetailHero";
 
 // Board filter state lives in the parent (through this hook) so the choices
@@ -229,7 +229,7 @@ function UsedModelCard({ modelKey, index, data, spec, targetEditor, onOpenRacque
         <span className={`deal-pill used-pill ${modelUsedOffers.length ? "has-live" : ""}`}>{modelUsedOffers.length ? `${modelUsedOffers.length} live` : "Searching"}</span>
       </div>
       <div className="model-identity">
-        <div><h3><RacquetName modelKey={modelKey} name={modelName} onOpen={onOpenRacquet} /></h3>{spec && <span className="card-specs">{[spec.head, spec.weight, spec.stiffness].filter(Boolean).join(" · ")}</span>}<PatternBadge pattern={spec?.pattern} /></div>
+        <div><h3><RacquetName modelKey={modelKey} name={modelName} onOpen={onOpenRacquet} /></h3>{spec && <CardSpecs spec={spec} />}<PatternBadge pattern={spec?.pattern} /></div>
         <RacquetImage modelKey={modelKey} spec={spec} className="model-thumbnail" width={122} height={158} alt={`${modelName} racquet`} sizes="122px" onPreview={onOpenRacquet} action="details" />
       </div>
       <div className="used-card-metrics">
