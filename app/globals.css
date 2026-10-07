@@ -1394,3 +1394,29 @@ select:disabled { color: #596760; opacity: .72; }
   .sale-filters button:not(.term-help) { flex: 1 1 auto; }
   .sale-photo { flex-basis: 64px; height: 86px; }
 }
+
+/* Analytics: period switch, changes vs the previous period, ranked bar lists and a chart that scales. */
+.analytics-range { display: flex; gap: 6px; margin-top: 18px; }
+.analytics-range button { border: 1px solid var(--line); border-radius: 999px; padding: 7px 13px; background: transparent; color: var(--muted); font: inherit; font-size: .72rem; font-weight: 800; cursor: pointer; }
+.analytics-range button.active { border-color: var(--ink); background: var(--ink); color: var(--paper); }
+.analytics-kpis small { text-transform: none; letter-spacing: 0; font-weight: 700; }
+.analytics-kpis small.up { color: #238256; }
+.analytics-kpis small.down { color: #b4462b; }
+.analytics-days { gap: 2px; }
+.analytics-days > div { min-width: 0; gap: 1px; }
+.analytics-days small { white-space: nowrap; overflow: visible; }
+.analytics-days span, .analytics-days i { min-height: 2px; }
+.analytics-legend { display: flex; align-items: center; gap: 7px; margin: 28px 0 0; color: var(--muted); font-size: .66rem; }
+.analytics-legend span { width: 10px; height: 10px; border-radius: 3px; background: #82c9a1; }
+.analytics-legend span.clicks { margin-left: 8px; background: var(--lime); }
+.analytics-section > div > p, .analytics-split > div > p { color: var(--muted); font-size: .75rem; }
+.analytics-bars li { position: relative; text-transform: none; }
+.analytics-bars li span { position: relative; z-index: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ink); }
+.analytics-bars li b { position: relative; z-index: 1; font-variant-numeric: tabular-nums; }
+.analytics-bars li i { position: absolute; left: 0; bottom: 2px; height: 3px; border-radius: 3px; background: color-mix(in srgb, var(--forest) 45%, transparent); }
+
+@media (prefers-color-scheme: dark) {
+  .analytics-kpis small.up { color: #8ee3b5; }
+  .analytics-kpis small.down { color: #f0a58f; }
+  .analytics-bars li i { background: color-mix(in srgb, #8ee3b5 55%, transparent); }
+}

@@ -34,7 +34,7 @@ export function SaleRack({ offers, loading, gripSize, eyebrow, title }: {
     </div>
     {preStrungCount > 0 && preStrungCount < offers.length && <div className="sale-filters" role="group" aria-label="Show sale racquets">
       {([["all", "All", offers.length], ["unstrung", "Unstrung frames", offers.length - preStrungCount], ["prestrung", "Pre-strung", preStrungCount]] as const).map(([key, label, count]) =>
-        <button key={key} className={filter === key ? "active" : ""} aria-pressed={filter === key} onClick={() => choose(key)}>{label} <span>{count}</span></button>)}
+        <button key={key} className={filter === key ? "active" : ""} aria-pressed={filter === key} onClick={() => choose(key)} data-analytics="sale_filter" data-analytics-detail={key}>{label} <span>{count}</span></button>)}
       <TermHelp term="prestrung" label="What is the difference between pre-strung and unstrung?" />
     </div>}
     <div className="sale-grid">

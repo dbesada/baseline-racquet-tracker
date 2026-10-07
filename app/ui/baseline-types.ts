@@ -149,12 +149,25 @@ export type PublicPreferences = {
   usedTargets?: Record<string, number>;
 };
 
+export type AnalyticsTotals = { visits: number; pageViews: number; buyClicks: number; retailerOpens: number; comparisons: number; coachOpens: number; coachCompletes: number; usedMarket: number };
+
 export type AnalyticsSummary = {
   startedAt: string;
   windowDays: number;
-  totals: { pageViews: number; dealOpens: number; retailerOpens: number; comparisons: number; coachOpens: number; usedMarket: number };
-  daily: Array<{ date: string; pageViews: number; dealOpens: number }>;
+  totals: AnalyticsTotals;
+  /** The same span just before this one, for "vs previous period". */
+  previous: AnalyticsTotals;
+  daily: Array<{ date: string; visits: number; pageViews: number; buyClicks: number }>;
   sections: Array<{ section: string; count: number }>;
+  clicksByKind: Array<{ kind: string; count: number }>;
+  topRacquets: Array<{ modelKey: string; name: string; count: number }>;
+  referrers: Array<{ source: string; count: number }>;
+  beginner: {
+    startHere: { coach: number; browse: number; hide: number };
+    coachCompletes: Array<{ focus: string; count: number }>;
+    terms: Array<{ term: string; count: number }>;
+    saleFilters: Array<{ filter: string; count: number }>;
+  };
   operations: { freshOffers: number; liveSources: number; totalSources: number; dropsLast24Hours: number; lastChecked: string | null };
   retailerWeeks?: RetailerWeeks;
 };

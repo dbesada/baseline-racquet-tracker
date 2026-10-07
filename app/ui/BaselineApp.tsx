@@ -49,6 +49,17 @@ const moreSections: Array<{ key: BrandViewKey; label: string }> = [
   { key: "special", label: "Special editions" }, { key: "balls", label: "Balls" }, { key: "accessories", label: "Accessories" },
 ];
 const startHereKey = "baseline-start-here";
+const visitKey = "baseline-visit-counted";
+
+// The referring site's name ("google.com"), or "direct" for none or this site.
+function referringSite(referrer: string, ownHost: string) {
+  try {
+    const host = new URL(referrer).hostname.replace(/^www./, "");
+    return host && host !== ownHost.replace(/^www./, "") ? host : "direct";
+  } catch {
+    return "direct";
+  }
+}
 
 const browseLegends: Partial<Record<BrandViewKey, React.ReactNode>> = {
   special: <><span className="special-dot" /> Verified grip-level stock <span className="stock-dot" /> In stock</>,
@@ -76,6 +87,7 @@ export function BaselineApp() {
   const [analyticsOpen, setAnalyticsOpen] = useState(false);
   const [analytics, setAnalytics] = useState<AnalyticsSummary | null>(null);
   const [analyticsLoading, setAnalyticsLoading] = useState(false);
+  const [analyticsDays, setAnalyticsDays] = useState(30);
   const [installPrompt, setInstallPrompt] = useState<InstallPromptEvent | null>(null);
   const [installContext, setInstallContext] = useState<InstallContext>("browser");
   const [activeBrand, setActiveBrand] = useState<BrandViewKey>("all");
@@ -128,11 +140,12 @@ export function BaselineApp() {
     void fetch(`/api/analytics?${query.toString()}`, { cache: "no-store", keepalive: true }).catch(() => undefined);
   }, [data?.publicPreview]);
 
-  const openAnalytics = useCallback(async () => {
+  const openAnalytics = useCallback(async (days = 30) => {
     setAnalyticsOpen(true);
+    setAnalyticsDays(days);
     setAnalyticsLoading(true);
     try {
-      const response = await fetch("/api/analytics", { cache: "no-store" });
+      const response = await fetch(`/api/analytics?days=${days}`, { cache: "no-store" });
       if (!response.ok) throw new Error("Could not load analytics");
       setAnalytics(await response.json() as AnalyticsSummary);
     } catch (caught) {
@@ -161,8 +174,28 @@ export function BaselineApp() {
   }, []);
 
   useEffect(() => {
-    if (data?.publicPreview) trackAnalytics("page_view");
+    if (!data?.publicPreview) return;
+    trackAnalytics("page_view");
+    // A visit is counted once per browser tab session, with the referring
+    // site's name only (or "direct").
+    try {
+      if (sessionStorage.getItem(visitKey)) return;
+      sessionStorage.setItem(visitKey, "1");
+    } catch { /* storage blocked: count the page view only */ return; }
+    trackAnalytics("visit", referringSite(document.referrer, window.location.hostname));
   }, [data?.publicPreview, trackAnalytics]);
+
+  // Buttons and tips mark themselves with data-analytics="<event>" (and an
+  // optional data-analytics-detail); one listener counts them all.
+  useEffect(() => {
+    const countClick = (event: MouseEvent) => {
+      const marked = (event.target as Element | null)?.closest?.("[data-analytics]");
+      const name = marked?.getAttribute("data-analytics");
+      if (name) trackAnalytics(name, marked?.getAttribute("data-analytics-detail") ?? undefined);
+    };
+    document.addEventListener("click", countClick);
+    return () => document.removeEventListener("click", countClick);
+  }, [trackAnalytics]);
 
   useEffect(() => {
     if (!data?.publicPreview || activeBrand === "all") return;
@@ -501,7 +534,7 @@ export function BaselineApp() {
         <div className="top-actions">
           <span className="status-dot"><i /> {activeMarket === "retail" ? `Watching ${data?.stores.length ?? 5} stores` : `${data?.usedOffers.length ?? 0} verified used listings`}</span>
           {data?.publicPreview && <span className="beta-badge">Public beta</span>}
-          {adminView && <button className="analytics-button" onClick={openAnalytics}>Analytics</button>}
+          {adminView && <button className="analytics-button" onClick={() => openAnalytics(analyticsDays)}>Analytics</button>}
           <label className="top-grip-select">
             <span>Grip</span>
             <select value={data?.gripSize ?? "L3"} onChange={(event) => changeGripSize(event.target.value as GripSize)} aria-label="Preferred grip size">
@@ -519,7 +552,7 @@ export function BaselineApp() {
         </div>
       </header>
 
-      {analyticsOpen && !data?.publicPreview && <AnalyticsPanel analytics={analytics} loading={analyticsLoading} onClose={() => setAnalyticsOpen(false)} />}
+      {analyticsOpen && !data?.publicPreview && <AnalyticsPanel analytics={analytics} loading={analyticsLoading} days={analyticsDays} onDaysChange={(days) => void openAnalytics(days)} onClose={() => setAnalyticsOpen(false)} />}
 
       {settingsOpen && <SettingsPanel
         data={data}
@@ -679,6 +712,7 @@ export function BaselineApp() {
         open={coachOpen}
         onOpenChange={(open) => (open ? openCoach() : setCoachOpen(false))}
         onCompare={compareCoachPicks}
+        onComplete={(focus) => trackAnalytics("coach_complete", focus)}
         affiliateLinksOn={affiliateLinksOn}
       />
 

@@ -12,7 +12,7 @@ export function TermTip({ term, children, className = "" }: { term: GlossaryTerm
   const id = `tip-${useId().replace(/[^a-zA-Z0-9_-]/g, "")}`;
   const entry: { title: string; text: string; more?: string } = glossary[term];
   return <>
-    <button type="button" className={`term-tip ${className}`} popoverTarget={id}>
+    <button type="button" className={`term-tip ${className}`} popoverTarget={id} data-analytics="term_tip" data-analytics-detail={term}>
       {children}<span className="visually-hidden"> — what does this mean?</span>
     </button>
     <span id={id} popover="auto" className="term-tip-card" role="note">

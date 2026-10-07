@@ -45,10 +45,10 @@ export function RetailHero({ data, loading, checking, error, opportunities, oppo
             <span>Answer a few quick questions and Baseline Coach will suggest racquets that suit your game.</span>
           </div>
           <div className="start-here-actions">
-            <button className="start-here-primary" onClick={onStartCoach}>Help me choose</button>
-            <button className="start-here-secondary" onClick={onBrowseRacquets}>I know what I want</button>
+            <button className="start-here-primary" onClick={onStartCoach} data-analytics="start_here" data-analytics-detail="coach">Help me choose</button>
+            <button className="start-here-secondary" onClick={onBrowseRacquets} data-analytics="start_here" data-analytics-detail="browse">I know what I want</button>
           </div>
-          <button className="start-here-close" onClick={onHideStartHere} aria-label="Hide this tip">×</button>
+          <button className="start-here-close" onClick={onHideStartHere} data-analytics="start_here" data-analytics-detail="hide" aria-label="Hide this tip">×</button>
         </div>}
         {error && <p className="error" role="alert">{error}</p>}
       </div>

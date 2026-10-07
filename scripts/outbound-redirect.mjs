@@ -3,13 +3,16 @@ import { appendFile, readFile, rename, stat, writeFile } from "node:fs/promises"
 // Outbound "buy" links go through /go/<offer id>. The relay looks the ID up in
 // the price monitor's state file and redirects to the URL stored there, so a
 // visitor can never choose where they are sent (no open redirect). Each click
-// is logged with the time, offer, retailer, market and affiliate network (null
-// for a plain link) only: no IP address, user agent, referrer or cookie.
+// is logged with the time, offer, retailer, market, affiliate network (null
+// for a plain link), the kind of listing and, for racquets, the model only:
+// no IP address, user agent, referrer or cookie.
 //
 // The market is a property of the deployment (this one is Canada), not of an
 // offer, so another market runs the same code with BASELINE_MARKET set.
 
 const offerLists = ["specialOffers", "usedOffers", "stringOffers", "accessoryOffers", "ballOffers"];
+// Which part of the site a listing belongs to, for the admin click report.
+const listKinds = { specialOffers: "special", usedOffers: "used", stringOffers: "string", accessoryOffers: "accessory", ballOffers: "ball" };
 const dayMs = 24 * 60 * 60 * 1000;
 
 export function marketFrom(value) {
@@ -17,12 +20,24 @@ export function marketFrom(value) {
 }
 
 export function findOffer(state, offerId) {
+  return findListedOffer(state, offerId)?.offer ?? null;
+}
+
+// The offer plus what the click report needs to know about it.
+export function findListedOffer(state, offerId) {
   if (!state || typeof state !== "object" || typeof offerId !== "string" || !offerId) return null;
-  const candidates = [
-    ...Object.values(state.offers ?? {}),
-    ...offerLists.flatMap((list) => (Array.isArray(state[list]) ? state[list] : [])),
-  ];
-  return candidates.find((offer) => offer?.id === offerId) ?? null;
+  const racquet = Object.values(state.offers ?? {}).find((offer) => offer?.id === offerId);
+  if (racquet) return { offer: racquet, ...clickDetails(racquet, racquet.modelKey === "other-sale" ? "sale" : "racquet") };
+  for (const list of offerLists) {
+    const offer = Array.isArray(state[list]) ? state[list].find((candidate) => candidate?.id === offerId) : null;
+    if (offer) return { offer, ...clickDetails(offer, listKinds[list]) };
+  }
+  return null;
+}
+
+function clickDetails(offer, kind) {
+  const model = (kind === "racquet" || kind === "special" || kind === "used") && /^[a-z0-9-]{1,80}$/.test(offer.modelKey ?? "") && offer.modelKey !== "other-sale" ? offer.modelKey : null;
+  return { kind, model };
 }
 
 // Only absolute http(s) URLs taken from the state file are ever redirected to.
@@ -94,12 +109,11 @@ export function createOutboundRedirect({ readState, clickLogPath, market = "CA",
 
   function rememberOffers(state) {
     const seenAt = now();
-    for (const list of [Object.values(state?.offers ?? {}), ...offerLists.map((name) => state?.[name])]) {
-      if (!Array.isArray(list)) continue;
-      for (const offer of list) {
-        if (typeof offer?.id === "string" && offerDestination(offer)) remembered.set(offer.id, { offer: { id: offer.id, store: offer.store, url: offer.url }, seenAt });
-      }
-    }
+    const remember = (offer, kind) => {
+      if (typeof offer?.id === "string" && offerDestination(offer)) remembered.set(offer.id, { offer: { id: offer.id, store: offer.store, url: offer.url }, ...clickDetails(offer, kind), seenAt });
+    };
+    for (const offer of Object.values(state?.offers ?? {})) remember(offer, offer?.modelKey === "other-sale" ? "sale" : "racquet");
+    for (const list of offerLists) for (const offer of Array.isArray(state?.[list]) ? state[list] : []) remember(offer, listKinds[list]);
     for (const [id, entry] of remembered) if (seenAt - entry.seenAt > rememberDays * dayMs) remembered.delete(id);
   }
 
@@ -110,15 +124,16 @@ export function createOutboundRedirect({ readState, clickLogPath, market = "CA",
       return;
     }
     const offerId = offerIdFromPath(req.url);
-    let offer = null;
+    let listed = null;
     if (offerId) {
       try {
         const state = await readState();
         rememberOffers(state);
-        offer = findOffer(state, offerId);
+        listed = findListedOffer(state, offerId);
       } catch { /* No collector run yet, or the file is being rewritten. */ }
-      offer ??= remembered.get(offerId)?.offer ?? null;
+      listed ??= remembered.get(offerId) ?? null;
     }
+    const offer = listed?.offer ?? null;
     const destination = offer && offerDestination(offer);
     if (!destination) {
       res.writeHead(404, { "content-type": "text/html; charset=utf-8", "cache-control": "no-store", "x-robots-tag": "noindex" });
@@ -128,7 +143,7 @@ export function createOutboundRedirect({ readState, clickLogPath, market = "CA",
     const link = affiliate(offer, destination);
     // Logging never throws, so it cannot stop the visitor reaching the retailer.
     if (req.method === "GET") {
-      await recordClick({ ts: new Date(now()).toISOString(), offerId, retailer: offer.store ?? "Unknown", market, network: link.network });
+      await recordClick({ ts: new Date(now()).toISOString(), offerId, retailer: offer.store ?? "Unknown", market, network: link.network, kind: listed.kind ?? null, model: listed.model ?? null });
     }
     res.writeHead(302, { location: link.url, "cache-control": "no-store", "referrer-policy": "no-referrer" });
     res.end();
