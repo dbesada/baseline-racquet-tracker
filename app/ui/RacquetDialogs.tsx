@@ -33,26 +33,63 @@ export function ImagePreviewDialog({ modelKey, modelName, spec, onClose }: { mod
   </div>;
 }
 
-export function RetailerDialog({ modelKey, data, offers, spec, onPreviewImage, onClose }: {
+// One spec value as the comparison table and the racquet pop-up show it.
+function SpecValue({ field, spec }: { field: keyof RacquetSpec; spec?: RacquetSpec }) {
+  if (field === "pattern") return patternPresentation(spec?.pattern) ? <PatternBadge pattern={spec?.pattern} /> : <>—</>;
+  return <>{standardizedSpecDisplay(field, spec?.[field]) ?? (field === "stiffness" ? "Not published" : "—")}</>;
+}
+
+export type RacquetDialogTab = "specs" | "retailers";
+
+// A racquet's own pop-up: its full specifications and every retailer's price.
+// Opened from a racquet's name or photo (Specs tab) or "Browse every retailer"
+// (Retailers tab).
+export function RetailerDialog({ modelKey, data, offers, spec, tab, compared, compareFull, onTabChange, onToggleCompare, onPreviewImage, onClose }: {
   modelKey: string;
   data: Dashboard | null;
   offers: Offer[];
   spec?: RacquetSpec;
+  tab: RacquetDialogTab;
+  compared: boolean;
+  compareFull: boolean;
+  onTabChange: (tab: RacquetDialogTab) => void;
+  onToggleCompare: (modelKey: string) => void;
   onPreviewImage: (modelKey: string) => void;
   onClose: () => void;
 }) {
   const modelName = data?.modelNames[modelKey] ?? modelKey;
   const target = data?.targets[modelKey] ?? 0;
+  const validation = validationPresentation(data?.specValidation?.[modelKey]);
   return (
     <div className="retailer-modal-backdrop" role="presentation" onMouseDown={closeOnBackdrop(onClose)}>
       <section className="retailer-modal" role="dialog" aria-modal="true" aria-labelledby="retailer-modal-title">
         <div className="retailer-modal-head">
           <div className="retailer-modal-identity">
             <RacquetImage modelKey={modelKey} spec={spec} className="retailer-modal-thumb" width={72} height={98} alt={`${modelName} racquet`} onPreview={onPreviewImage} />
-             <div><span>{modelBrand(modelKey)} · {data?.gripSize ?? "L3"}</span><h2 id="retailer-modal-title">{modelName}</h2><PatternBadge pattern={spec?.pattern} /><p>{offers.length} verified {offers.length === 1 ? "retailer" : "retailers"}, ranked by price</p><AffiliateNote show={hasAffiliateLinks(data)} /></div>
+             <div><span>{modelBrand(modelKey)} · {data?.gripSize ?? "L3"}</span><h2 id="retailer-modal-title">{modelName}</h2><PatternBadge pattern={spec?.pattern} /><p>{offers.length ? `${offers.length} verified ${offers.length === 1 ? "retailer" : "retailers"}, ranked by price` : "No verified in-stock retailer right now"}</p><AffiliateNote show={hasAffiliateLinks(data)} /></div>
           </div>
-          <button className="retailer-modal-close" onClick={onClose} aria-label="Close retailer comparison">×</button>
+          <button className="retailer-modal-close" onClick={onClose} aria-label="Close racquet details">×</button>
         </div>
+        <div className="racquet-dialog-bar">
+          <div className="racquet-dialog-tabs" role="tablist" aria-label="Racquet details">
+            <button role="tab" id="racquet-tab-specs" aria-selected={tab === "specs"} aria-controls="racquet-panel" className={tab === "specs" ? "active" : ""} onClick={() => onTabChange("specs")}>Specs</button>
+            <button role="tab" id="racquet-tab-retailers" aria-selected={tab === "retailers"} aria-controls="racquet-panel" className={tab === "retailers" ? "active" : ""} onClick={() => onTabChange("retailers")}>Retailers{offers.length ? ` (${offers.length})` : ""}</button>
+          </div>
+          <button className={`racquet-dialog-compare ${compared ? "on" : ""}`} disabled={!compared && compareFull} onClick={() => onToggleCompare(modelKey)}>{compared ? "✓ In comparison" : compareFull ? "Comparison full" : "+ Compare"}</button>
+        </div>
+        <div id="racquet-panel" role="tabpanel" aria-labelledby={tab === "specs" ? "racquet-tab-specs" : "racquet-tab-retailers"}>
+        {tab === "specs" ? <>
+          <div className="racquet-specs-layout">
+          <RacquetImage modelKey={modelKey} spec={spec} className="racquet-dialog-photo" width={300} height={400} sizes="(max-width: 720px) 60vw, 300px" alt={`${modelName} racquet`} onPreview={onPreviewImage} />
+          <dl className="racquet-spec-list">
+            {/* One racquet: list only what is known (stiffness says when it isn't published). */}
+            {comparisonRows.filter(([, field]) => field === "stiffness" || (field === "pattern" ? patternPresentation(spec?.pattern) : standardizedSpecDisplay(field, spec?.[field]))).map(([label, field]) => <div key={field}><dt>{label}</dt><dd><SpecValue field={field} spec={spec} /></dd></div>)}
+            <div><dt>Independent validation</dt><dd><span className={`spec-validation ${validation.tone}`}>{validation.label}</span></dd></div>
+            <div><dt>Specification source</dt><dd>{spec?.sourceUrl ? <a className="comparison-source" href={spec.sourceUrl} target="_blank" rel="noreferrer">{spec.source ?? "Manufacturer / retailer source"} ↗</a> : (spec?.source ?? "Catalogue fallback")}</dd></div>
+          </dl>
+          </div>
+          <p className="retailer-modal-note">{comparisonNote}</p>
+        </> : <>
         <div className="retailer-modal-summary">
           <div><span>Best price</span><strong>{offers[0]?.currentPrice != null ? money.format(offers[0].currentPrice) : "—"}</strong></div>
           <div><span>Your target</span><strong>{money.format(target)}</strong></div>
@@ -71,6 +108,8 @@ export function RetailerDialog({ modelKey, data, offers, spec, onPreviewImage, o
           })}
         </div>
         <p className="retailer-modal-note">Prices are ranked before shipping and tax. Open a retailer to confirm final grip stock and checkout total.</p>
+        </>}
+        </div>
       </section>
     </div>
   );
@@ -126,7 +165,7 @@ export function ComparisonDialog({ compareKeys, data, specs, refreshingModels, o
             </thead>
             <tbody>
               {comparisonRows.map(([label, field]) => (
-                <tr className={field === "pattern" ? "comparison-pattern-row" : ""} key={field}><th>{label}</th>{compareKeys.map((key) => <td key={key}>{field === "pattern" ? (patternPresentation(specs[key]?.pattern) ? <PatternBadge pattern={specs[key]?.pattern} /> : "—") : (standardizedSpecDisplay(field, specs[key]?.[field]) ?? (field === "stiffness" ? "Not published" : "—"))}</td>)}</tr>
+                <tr className={field === "pattern" ? "comparison-pattern-row" : ""} key={field}><th>{label}</th>{compareKeys.map((key) => <td key={key}><SpecValue field={field} spec={specs[key]} /></td>)}</tr>
               ))}
               <tr><th>Independent validation</th>{compareKeys.map((key) => { const validation = validationPresentation(data?.specValidation?.[key]); return <td key={key}><span className={`spec-validation ${validation.tone}`}>{validation.label}</span></td>; })}</tr>
               <tr><th>Specification source</th>{compareKeys.map((key) => {

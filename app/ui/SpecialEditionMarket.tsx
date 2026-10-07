@@ -79,12 +79,12 @@ export function useSpecialEditions(specialOffers: Offer[] | undefined, gripSize:
 
 export type SpecialEditionState = ReturnType<typeof useSpecialEditions>;
 
-export function SpecialEditionMarket({ market, gripSize, loading, specs, onPreviewImage }: {
+export function SpecialEditionMarket({ market, gripSize, loading, specs, onOpenRacquet }: {
   market: SpecialEditionState;
   gripSize: string;
   loading: boolean;
   specs: Record<string, RacquetSpec>;
-  onPreviewImage: (modelKey: string) => void;
+  onOpenRacquet: (modelKey: string) => void;
 }) {
   const { stats, filteredGroups } = market;
   return (
@@ -105,14 +105,14 @@ export function SpecialEditionMarket({ market, gripSize, loading, specs, onPrevi
         {(market.brandFilter !== "all" || market.gripFilter !== "all" || market.availabilityFilter !== "all" || market.sort !== "edition") && <button className="clear-catalogue" onClick={() => { market.setBrandFilter("all"); market.setGripFilter("all"); market.setAvailabilityFilter("all"); market.setSort("edition"); }}>Clear</button>}
       </div>
       <div className="special-market-grid">
-        {filteredGroups.map((group) => <SpecialEditionCard group={group} spec={specs[group.modelKey]} onPreviewImage={onPreviewImage} key={`special-market-${group.key}`} />)}
+        {filteredGroups.map((group) => <SpecialEditionCard group={group} spec={specs[group.modelKey]} onOpenRacquet={onOpenRacquet} key={`special-market-${group.key}`} />)}
       </div>
       {!loading && !filteredGroups.length && <div className="special-market-empty"><strong>No special editions match those filters.</strong><span>Clear the filters or try another grip; Baseline keeps checking all enabled retailers every 3 hours.</span></div>}
     </section>
   );
 }
 
-function SpecialEditionCard({ group, spec, onPreviewImage }: { group: SpecialEditionGroup; spec?: RacquetSpec; onPreviewImage: (modelKey: string) => void }) {
+function SpecialEditionCard({ group, spec, onOpenRacquet }: { group: SpecialEditionGroup; spec?: RacquetSpec; onOpenRacquet: (modelKey: string) => void }) {
   const offer = group.bestOffer;
   return (
     <article className={`special-market-card ${offer.sourceState === "stale" ? "stale-offer-card" : ""}`}>
@@ -126,7 +126,7 @@ function SpecialEditionCard({ group, spec, onPreviewImage }: { group: SpecialEdi
           <h3>{group.title}</h3>
           <PatternBadge pattern={spec?.pattern} compact />
         </div>
-        <RacquetImage modelKey={group.modelKey} spec={spec} className="special-frame-thumb" width={82} height={112} alt={`${group.title} racquet`} onPreview={onPreviewImage} />
+        <RacquetImage modelKey={group.modelKey} spec={spec} className="special-frame-thumb" width={82} height={112} alt={`${group.title} racquet`} onPreview={onOpenRacquet} action="details" />
       </div>
       <div className="special-card-footer">
         <span><small className="special-price-label">{offer.sourceState === "stale" ? "LAST VERIFIED" : "BEST PRICE"}</small><span className="special-price">{money.format(offer.currentPrice ?? 0)}{offer.compareAtPrice != null && offer.compareAtPrice > (offer.currentPrice ?? 0) && <del>{money.format(offer.compareAtPrice)}</del>}</span></span>

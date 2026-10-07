@@ -29,7 +29,7 @@ test("the note sits near prices in every agreed place, and the footer links the 
   assert.match(app, /affiliateLinksOn=\{affiliateLinksOn\}/, "passed to Baseline Coach");
   assert.match(app, /\{affiliateLinksOn && <> <a className="footer-disclosure" href=\{affiliateDisclosurePath\}>Affiliate disclosure<\/a><\/>\}/, "footer link only while on");
   assert.match(hero, /className="last-check">[\s\S]*?<\/span>\s*<\/div>\s*<AffiliateNote show=\{hasAffiliateLinks\(data\)\} \/>/, "beside the Best opportunity card, outside its fixed-size panel");
-  assert.match(dialogs, /ranked by price<\/p><AffiliateNote show=\{hasAffiliateLinks\(data\)\} \/>/, "in the All retailers pop-up");
+  assert.match(dialogs, /ranked by price` : "No verified in-stock retailer right now"\}<\/p><AffiliateNote show=\{hasAffiliateLinks\(data\)\} \/>/, "in the racquet pop-up, beside the retailer count");
   assert.match(used, /verified<\/div>\s*<\/div>\s*<AffiliateNote show=\{hasAffiliateLinks\(data\)\} \/>/, "under the used-market heading");
   assert.match(coach, /affiliateLinksOn = false/);
   assert.match(coach, /<AffiliateNote show=\{affiliateLinksOn\} \/>\s*\{showModels &&/, "above the Coach picks");

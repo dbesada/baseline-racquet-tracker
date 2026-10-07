@@ -6,7 +6,7 @@ import { AffiliateNote } from "./AffiliateNote";
 import type { Dashboard, GripSize, RacquetSpec, TargetEditor, UsedAvailability, UsedSort } from "./baseline-types";
 import { accents, gripLabel, gripOptions, money, offerMoney, outboundHref, outboundRel, relativeTime, usedMarketplaces } from "./baseline-catalogue";
 import type { MarketplaceHealth } from "./dashboard-insights";
-import { PatternBadge, RacquetImage } from "./racquet-visuals";
+import { PatternBadge, RacquetImage, RacquetName } from "./racquet-visuals";
 import { SourceHealth } from "./RetailHero";
 
 // Board filter state lives in the parent (through this hook) so the choices
@@ -50,7 +50,7 @@ export function useUsedBoard(data: Dashboard | null) {
 
 export type UsedBoardState = ReturnType<typeof useUsedBoard>;
 
-export function UsedMarket({ board, data, loading, checking, marketplaces, specs, targetEditor, onCheckNow, onGripSizeChange, onPreviewImage }: {
+export function UsedMarket({ board, data, loading, checking, marketplaces, specs, targetEditor, onCheckNow, onGripSizeChange, onOpenRacquet }: {
   board: UsedBoardState;
   data: Dashboard | null;
   loading: boolean;
@@ -60,7 +60,7 @@ export function UsedMarket({ board, data, loading, checking, marketplaces, specs
   targetEditor: TargetEditor;
   onCheckNow: () => void;
   onGripSizeChange: (gripSize: GripSize) => void;
-  onPreviewImage: (modelKey: string) => void;
+  onOpenRacquet: (modelKey: string) => void;
 }) {
   const { modelKeys, visibleModelKeys } = board;
   return <>
@@ -169,7 +169,7 @@ export function UsedMarket({ board, data, loading, checking, marketplaces, specs
       </div>
 
       <div className="model-grid used-model-grid">
-        {visibleModelKeys.map((modelKey, index) => <UsedModelCard modelKey={modelKey} index={index} data={data} spec={specs[modelKey]} targetEditor={targetEditor} onPreviewImage={onPreviewImage} key={`used-${modelKey}-${index}`} />)}
+        {visibleModelKeys.map((modelKey, index) => <UsedModelCard modelKey={modelKey} index={index} data={data} spec={specs[modelKey]} targetEditor={targetEditor} onOpenRacquet={onOpenRacquet} key={`used-${modelKey}-${index}`} />)}
       </div>
       {!loading && modelKeys.length === 0 && <p className="catalogue-empty">No used-market watchlist frames are configured yet.</p>}
       {!loading && modelKeys.length > 0 && visibleModelKeys.length === 0 && <p className="catalogue-empty">No watched frames match these filters. Clear the filters to see the full board.</p>}
@@ -208,13 +208,13 @@ export function UsedMarket({ board, data, loading, checking, marketplaces, specs
   </>;
 }
 
-function UsedModelCard({ modelKey, index, data, spec, targetEditor, onPreviewImage }: {
+function UsedModelCard({ modelKey, index, data, spec, targetEditor, onOpenRacquet }: {
   modelKey: string;
   index: number;
   data: Dashboard | null;
   spec?: RacquetSpec;
   targetEditor: TargetEditor;
-  onPreviewImage: (modelKey: string) => void;
+  onOpenRacquet: (modelKey: string) => void;
 }) {
   const modelName = data?.modelNames[modelKey] ?? modelKey;
   const target = data?.usedTargets[modelKey] ?? Math.round((data?.targets[modelKey] ?? 250) * 0.68);
@@ -229,8 +229,8 @@ function UsedModelCard({ modelKey, index, data, spec, targetEditor, onPreviewIma
         <span className={`deal-pill used-pill ${modelUsedOffers.length ? "has-live" : ""}`}>{modelUsedOffers.length ? `${modelUsedOffers.length} live` : "Searching"}</span>
       </div>
       <div className="model-identity">
-        <div><h3>{modelName}</h3>{spec && <span className="card-specs">{[spec.head, spec.weight, spec.stiffness].filter(Boolean).join(" · ")}</span>}<PatternBadge pattern={spec?.pattern} /></div>
-        <RacquetImage modelKey={modelKey} spec={spec} className="model-thumbnail" width={122} height={158} alt={`${modelName} racquet`} sizes="122px" onPreview={onPreviewImage} />
+        <div><h3><RacquetName modelKey={modelKey} name={modelName} onOpen={onOpenRacquet} /></h3>{spec && <span className="card-specs">{[spec.head, spec.weight, spec.stiffness].filter(Boolean).join(" · ")}</span>}<PatternBadge pattern={spec?.pattern} /></div>
+        <RacquetImage modelKey={modelKey} spec={spec} className="model-thumbnail" width={122} height={158} alt={`${modelName} racquet`} sizes="122px" onPreview={onOpenRacquet} action="details" />
       </div>
       <div className="used-card-metrics">
         <div className="used-target-metric">
