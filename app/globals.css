@@ -716,7 +716,7 @@ h2 { margin: 0; font-size: clamp(2rem, 3.5vw, 3.6rem); letter-spacing: -.055em; 
 .coach-launch:hover { transform: translateY(-2px); box-shadow: 0 19px 48px rgba(4,15,11,.38); }
 .coach-launch.raised { bottom: 102px; }
 .coach-launch-ball { width: 40px; height: 40px; display: grid; place-items: center; flex: 0 0 auto; border-radius: 50%; background: var(--lime); color: #10251d; font-family: Georgia, serif; font-size: 1.15rem; font-weight: 900; transform: rotate(-8deg); }
-.coach-launch > span:last-child { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; }
+.coach-launch-label { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; }
 .coach-launch b { font-size: .82rem; line-height: 1.2; }
 .coach-launch small { color: #c4d0ca; font-size: .68rem; line-height: 1.25; }
 .mobile-dock { display: none; }
@@ -1253,7 +1253,7 @@ footer > span { text-align: right; letter-spacing: .12em; }
   .string-guide-example-grid, .string-guide-advanced-body { grid-template-columns: 1fr; }
   .coach-launch.raised { bottom: 145px; }
   .coach-launch-ball { width: 40px; height: 40px; }
-  .coach-launch > span:last-child { display: none; }
+  .coach-launch-label { display: none; }
   .coach-panel { inset: auto 0 0; width: 100%; height: min(780px, calc(100dvh - 10px)); border-width: 1px 0 0; border-radius: 24px 24px 0 0; }
   .coach-head { padding: 17px 18px 14px; }
   .coach-head h2 { font-size: 1.45rem; }
@@ -1311,4 +1311,59 @@ select:disabled { color: #596760; opacity: .72; }
 @media (max-width: 620px) and (prefers-color-scheme: dark) {
   .comparison-table thead { background: #172329; }
   .compare-note-mobile { color: #c3cdd2; }
+}
+
+/* Beginner help: tap-to-explain terms, the start-here card, "Good for" lines and the simpler section menu. */
+.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; }
+/* Zero specificity, so badges and buttons keep their own look. */
+:where(.term-tip) { appearance: none; margin: 0; padding: 0; border: 0; background: none; color: inherit; font: inherit; letter-spacing: inherit; text-align: inherit; cursor: help; text-decoration: underline dotted color-mix(in srgb, currentColor 55%, transparent); text-underline-offset: 3px; }
+.pattern-tip { display: inline-block; max-width: 100%; text-decoration: none; }
+.term-help { width: 20px; height: 20px; display: inline-grid; place-items: center; vertical-align: middle; border: 1px solid var(--line); border-radius: 50%; color: var(--muted); font-size: .66rem; font-weight: 900; line-height: 1; text-decoration: none; }
+.term-help:hover, .term-help:focus-visible { color: var(--ink); border-color: var(--ink); }
+.top-actions > .term-help { width: 28px; height: 28px; font-size: .78rem; }
+.term-tip-card { width: min(360px, calc(100vw - 32px)); margin: auto; padding: 18px 18px 14px; border: 1px solid var(--line); border-radius: 18px; background: var(--paper); color: var(--ink); box-shadow: 0 24px 70px rgba(4,15,11,.35); font-size: .86rem; font-weight: 500; line-height: 1.5; letter-spacing: normal; text-align: left; text-transform: none; white-space: normal; }
+.term-tip-card:popover-open { display: grid; gap: 9px; }
+.term-tip-card::backdrop { background: rgba(7,20,15,.35); }
+.term-tip-card strong { font-size: .98rem; font-weight: 850; }
+.term-tip-card > span { color: var(--muted); }
+.term-tip-card button { justify-self: end; margin-top: 2px; border: 0; border-radius: 999px; padding: 8px 16px; background: var(--ink); color: var(--paper); font: inherit; font-size: .76rem; font-weight: 800; cursor: pointer; }
+.player-fit { display: flex; flex-wrap: wrap; gap: 4px 6px; margin-top: 9px; font-size: .68rem; line-height: 1.35; color: var(--muted); text-decoration: none; }
+.player-fit strong { color: var(--forest); font-weight: 850; text-decoration: underline dotted color-mix(in srgb, currentColor 55%, transparent); text-underline-offset: 3px; }
+.player-fit.beginner strong::before { content: "● "; color: #33a56f; }
+.player-fit.intermediate strong::before { content: "● "; color: #d6a400; }
+.player-fit.advanced strong::before { content: "● "; color: #c2552f; }
+.retailer-modal .player-fit { margin: 0 0 14px; font-size: .8rem; }
+.start-here { position: relative; display: grid; gap: 14px; max-width: 34rem; margin-top: 22px; padding: 16px 44px 16px 18px; border: 1px solid var(--line); border-radius: 18px; background: color-mix(in srgb, var(--lime) 22%, var(--paper)); }
+.start-here > div:first-child { display: grid; gap: 4px; }
+.start-here strong { font-size: .95rem; }
+.start-here span { color: var(--muted); font-size: .82rem; line-height: 1.45; }
+.start-here-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.start-here-actions button { border-radius: 999px; padding: 10px 16px; font: inherit; font-size: .8rem; font-weight: 800; cursor: pointer; }
+.start-here-primary { border: 0; background: var(--ink); color: var(--paper); }
+.start-here-secondary { border: 1px solid var(--line); background: transparent; color: var(--ink); }
+.start-here-close { position: absolute; top: 8px; right: 8px; width: 30px; height: 30px; border: 0; border-radius: 50%; background: transparent; color: var(--muted); font-size: 1.2rem; cursor: pointer; }
+.start-here-close:hover { color: var(--ink); }
+.brand-nav-more span { font-size: .6rem; }
+.brand-subnav { display: flex; flex-wrap: wrap; gap: 8px; flex-basis: 100%; }
+.brand-subnav button { border: 1px solid var(--line); border-radius: 999px; padding: 8px 14px; background: transparent; color: var(--muted); font: inherit; font-size: .72rem; font-weight: 750; cursor: pointer; }
+.brand-subnav button:hover { color: var(--ink); }
+.brand-subnav button.active { border-color: var(--ink); background: var(--ink); color: var(--paper); }
+.browse-navigation { flex-wrap: wrap; }
+.coach-launch-short { display: none; }
+
+@media (prefers-color-scheme: dark) {
+  .term-tip-card { background: #172329; }
+  .start-here { background: color-mix(in srgb, var(--lime) 10%, #172329); }
+  .player-fit strong { color: #f5f7f8; }
+  .term-help { color: #c3cdd2; }
+}
+
+@media (max-width: 620px) {
+  .beta-badge { display: none; }
+  .start-here { margin-top: 18px; }
+  .start-here-actions button { flex: 1 1 auto; }
+  .browse-navigation .brand-nav { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+  .brand-subnav button { flex: 1 1 auto; }
+  .coach-launch { padding: 5px 14px 5px 5px; }
+  .coach-launch-short { display: block; font-size: .78rem; font-weight: 800; }
 }

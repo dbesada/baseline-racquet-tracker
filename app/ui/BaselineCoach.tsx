@@ -61,7 +61,9 @@ type BaselineCoachProps = {
   gripLabel: string;
   raised?: boolean;
   onCompare: (modelKeys: string[]) => void;
-  onOpen?: () => void;
+  /** The parent owns whether the coach is open, so other buttons can open it too. */
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
   affiliateLinksOn?: boolean;
 };
 
@@ -163,8 +165,8 @@ function questionsFor(answers: CoachAnswers): Question[] {
   return answers.focus === "complete" ? [...common, formatQuestion, ...racquetQuestions] : [...common, ...racquetQuestions];
 }
 
-export function BaselineCoach({ models, strings, gripLabel, raised = false, onCompare, onOpen, affiliateLinksOn = false }: BaselineCoachProps) {
-  const [open, setOpen] = useState(false);
+export function BaselineCoach({ models, strings, gripLabel, raised = false, onCompare, open, onOpenChange, affiliateLinksOn = false }: BaselineCoachProps) {
+  const setOpen = onOpenChange;
   const [started, setStarted] = useState(false);
   const [completed, setCompleted] = useState(false);
   const [step, setStep] = useState(0);
@@ -195,7 +197,7 @@ export function BaselineCoach({ models, strings, gripLabel, raised = false, onCo
     const closeOnEscape = (event: KeyboardEvent) => { if (event.key === "Escape") setOpen(false); };
     window.addEventListener("keydown", closeOnEscape);
     return () => window.removeEventListener("keydown", closeOnEscape);
-  }, [open]);
+  }, [open, setOpen]);
 
   useEffect(() => {
     transcriptRef.current?.scrollTo({ top: transcriptRef.current.scrollHeight, behavior: "smooth" });
@@ -238,9 +240,10 @@ export function BaselineCoach({ models, strings, gripLabel, raised = false, onCo
 
   return (
     <>
-      <button className={`coach-launch ${raised ? "raised" : ""}`} onClick={() => { onOpen?.(); setOpen(true); }} aria-label="Open Baseline Coach">
+      <button className={`coach-launch ${raised ? "raised" : ""}`} onClick={() => setOpen(true)} aria-label="Open Baseline Coach">
         <span className="coach-launch-ball" aria-hidden="true">B</span>
-        <span><b>Need help choosing?</b><small>Ask Baseline Coach</small></span>
+        <span className="coach-launch-label"><b>Need help choosing?</b><small>Ask Baseline Coach</small></span>
+        <span className="coach-launch-short" aria-hidden="true">Help me choose</span>
       </button>
 
       {open && (

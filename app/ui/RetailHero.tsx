@@ -7,7 +7,7 @@ import { money, outboundHref, outboundRel, relativeTime } from "./baseline-catal
 import type { Opportunity } from "./dashboard-insights";
 import { PatternBadge, RacquetName } from "./racquet-visuals";
 
-export function RetailHero({ data, loading, checking, error, opportunities, opportunityMode, specs, onCheckNow, onOpportunityModeChange, onShowRetailers, onOpenRacquet }: {
+export function RetailHero({ data, loading, checking, error, opportunities, opportunityMode, specs, showStartHere, onCheckNow, onOpportunityModeChange, onShowRetailers, onOpenRacquet, onStartCoach, onBrowseRacquets, onHideStartHere }: {
   data: Dashboard | null;
   loading: boolean;
   checking: boolean;
@@ -19,6 +19,10 @@ export function RetailHero({ data, loading, checking, error, opportunities, oppo
   onOpportunityModeChange: (mode: OpportunityMode) => void;
   onShowRetailers: (modelKey: string) => void;
   onOpenRacquet: (modelKey: string) => void;
+  showStartHere: boolean;
+  onStartCoach: () => void;
+  onBrowseRacquets: () => void;
+  onHideStartHere: () => void;
 }) {
   const selected = opportunities.find((choice) => choice.mode === opportunityMode) ?? opportunities[0] ?? null;
   return (
@@ -26,15 +30,26 @@ export function RetailHero({ data, loading, checking, error, opportunities, oppo
       <div className="hero-copy">
         <p className="eyebrow">CANADIAN RACQUET PRICE TRACKER</p>
         <h1>Wait for the<br /><em>right bounce.</em></h1>
-        <p className="lede">Baseline watches the frames on your shortlist, checks enabled Canadian retailers every 3 hours, and calls the shot when the price drops.</p>
+        <p className="lede">Baseline compares tennis racquet prices across Canadian stores every 3 hours, so you can see who has the lowest price before you buy.</p>
         <div className="hero-actions">
-          {data?.publicPreview ? <span className="public-refresh-note">Prices refresh automatically<br /><strong>Every 3 hours</strong></span> : <button className="check-button" onClick={onCheckNow} disabled={checking}>
+          {!data || data.publicPreview ? <span className="public-refresh-note">Prices refresh automatically<br /><strong>Every 3 hours</strong></span> : <button className="check-button" onClick={onCheckNow} disabled={checking}>
             <span className={checking ? "spin" : ""} aria-hidden="true">↻</span>
             {checking ? "Checking stores…" : "Check prices now"}
           </button>}
-          <span className="last-check">Last checked<br /><strong>{relativeTime(data?.lastCheck?.checkedAt)}</strong></span>
+          <span className="last-check">Last checked<br /><strong>{loading ? "Loading…" : relativeTime(data?.lastCheck?.checkedAt)}</strong></span>
         </div>
         <AffiliateNote show={hasAffiliateLinks(data)} />
+        {showStartHere && <div className="start-here">
+          <div>
+            <strong>New to tennis gear?</strong>
+            <span>Answer a few quick questions and Baseline Coach will suggest racquets that suit your game.</span>
+          </div>
+          <div className="start-here-actions">
+            <button className="start-here-primary" onClick={onStartCoach}>Help me choose</button>
+            <button className="start-here-secondary" onClick={onBrowseRacquets}>I know what I want</button>
+          </div>
+          <button className="start-here-close" onClick={onHideStartHere} aria-label="Hide this tip">×</button>
+        </div>}
         {error && <p className="error" role="alert">{error}</p>}
       </div>
       <div className="court-card opportunity-court" aria-label="Best opportunity right now">
@@ -69,9 +84,9 @@ export function RetailHero({ data, loading, checking, error, opportunities, oppo
           </> : <p className="opportunity-empty">{loading ? "Finding today’s best opportunity…" : "No verified in-stock opportunity yet."}</p>}
         </div>
         <div className="summary-copy opportunity-stats">
-          <span><strong>{data?.dropsLast24Hours ?? 0}</strong> drops in 24h</span>
-          <span><strong>{data?.lastCheck?.offersFound ?? 0}</strong> verified listings</span>
-          <span><strong>{data?.lastCheck?.storesChecked ?? 0}</strong> retailers checked</span>
+          <span><strong>{data?.dropsLast24Hours ?? 0}</strong> price drops, last 24h</span>
+          <span><strong>{data?.lastCheck?.offersFound ?? 0}</strong> prices checked</span>
+          <span><strong>{data?.lastCheck?.storesChecked ?? 0}</strong> stores checked</span>
         </div>
       </div>
     </section>
@@ -81,8 +96,8 @@ export function RetailHero({ data, loading, checking, error, opportunities, oppo
 export function SourceHealth({ data }: { data: Dashboard | null }) {
   if (!data?.sourceHealth) return null;
   return <div className={`source-health ${data.sourceHealth.failures ? "partial" : "healthy"}`} aria-label="Price data health">
-    <span className="source-health-state"><i />{data.sourceHealth.failures ? "PARTIAL SCAN" : "ALL SYSTEMS LIVE"}</span>
-    <span><strong>{data.sourceHealth.freshOffers}</strong> fresh offers</span>
+    <span className="source-health-state"><i />{data.sourceHealth.failures ? "Some stores still updating" : "All stores up to date"}</span>
+    <span><strong>{data.sourceHealth.freshOffers}</strong> current prices</span>
     {!data.publicPreview && <details>
       <summary>Data details</summary>
       <div className="source-health-details">

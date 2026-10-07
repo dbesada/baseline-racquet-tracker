@@ -30,18 +30,25 @@ import { RetailHero, SourceHealth } from "./RetailHero";
 import { SettingsPanel, type InstallContext } from "./SettingsPanel";
 import { SpecialEditionMarket, useSpecialEditions } from "./SpecialEditionMarket";
 import { StringMarket, useStringMarket } from "./StringMarket";
+import { TermHelp } from "./TermTip";
 import { UsedMarket, useUsedBoard } from "./UsedMarket";
 
 const browseHeadings: Partial<Record<BrandViewKey, { eyebrow: string; title: string }>> = {
-  all: { eyebrow: "YOUR WATCHLIST", title: "Six frames. Best price wins." },
+  all: { eyebrow: "YOUR WATCHLIST", title: "Six racquets, best Canadian prices." },
   catalogue: { eyebrow: "THE COMPLETE MARKET", title: "All racquets. One searchable market." },
   special: { eyebrow: "LIMITED COLOURWAYS & COLLABORATIONS", title: "Special editions in every available grip." },
   strings: { eyebrow: "CANADIAN TENNIS STRING MARKET", title: "Find the right feel, type, and gauge." },
   balls: { eyebrow: "CANADIAN TENNIS BALL MARKET", title: "The right ball for every court." },
   accessories: { eyebrow: "RACQUET ACCESSORIES ACROSS CANADA", title: "Everything around the frame, in one place." },
-  guide: { eyebrow: "THE RACQUET TRANSLATOR", title: "What racquet numbers feel like on court." },
-  "string-guide": { eyebrow: "THE STRING TRANSLATOR", title: "What to put in the frame." },
+  guide: { eyebrow: "LEARN · RACQUETS", title: "What racquet numbers feel like on court." },
+  "string-guide": { eyebrow: "LEARN · STRINGS", title: "What to put in the frame." },
 };
+
+// Less-used sections sit behind "More"; both guides sit under "Learn".
+const moreSections: Array<{ key: BrandViewKey; label: string }> = [
+  { key: "special", label: "Special editions" }, { key: "balls", label: "Balls" }, { key: "accessories", label: "Accessories" },
+];
+const startHereKey = "baseline-start-here";
 
 const browseLegends: Partial<Record<BrandViewKey, React.ReactNode>> = {
   special: <><span className="special-dot" /> Verified grip-level stock <span className="stock-dot" /> In stock</>,
@@ -78,6 +85,9 @@ export function BaselineApp() {
   const [imagePreviewKey, setImagePreviewKey] = useState<string | null>(null);
   const [racquetTab, setRacquetTab] = useState<RacquetDialogTab>("specs");
   const [opportunityMode, setOpportunityMode] = useState<OpportunityMode>("target");
+  const [coachOpen, setCoachOpen] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
+  const [showStartHere, setShowStartHere] = useState(false);
 
   const resolvedRacquetSpecs = useMemo(() => resolveRacquetSpecs(data), [data]);
   const catalogueMetrics = useMemo(() => computeCatalogueMetrics(data), [data]);
@@ -140,6 +150,15 @@ export function BaselineApp() {
     }, 0);
     return () => window.clearTimeout(timer);
   }, [load]);
+
+  useEffect(() => {
+    // Local storage is browser-only: reading it after hydration keeps the
+    // first render identical to the server's.
+    let hidden = false;
+    try { hidden = localStorage.getItem(startHereKey) === "hidden"; } catch { /* storage blocked: keep showing it */ }
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setShowStartHere(!hidden);
+  }, []);
 
   useEffect(() => {
     if (data?.publicPreview) trackAnalytics("page_view");
@@ -451,6 +470,20 @@ export function BaselineApp() {
     onShowRetailers: showRetailers,
     onOpenRacquet: openRacquet,
   };
+  const openCoach = () => { trackAnalytics("coach_open"); setCoachOpen(true); };
+  const browseRacquets = () => {
+    setActiveBrand("catalogue");
+    catalogue.resetPaging();
+    document.getElementById("browse-market")?.scrollIntoView({ behavior: "smooth" });
+  };
+  const hideStartHere = () => {
+    setShowStartHere(false);
+    try { localStorage.setItem(startHereKey, "hidden"); } catch { /* hiding for this visit is enough */ }
+  };
+  // Admin-only controls wait until the dashboard says this is not the public preview.
+  const adminView = data ? !data.publicPreview : false;
+  const moreActive = moreSections.some((section) => section.key === activeBrand);
+  const learnActive = activeBrand === "guide" || activeBrand === "string-guide";
   const racquetBrandActive = activeBrand === "catalogue" || brandList.includes(activeBrand as Exclude<BrandKey, "all">);
   const affiliateLinksOn = hasAffiliateLinks(data);
 
@@ -468,16 +501,17 @@ export function BaselineApp() {
         <div className="top-actions">
           <span className="status-dot"><i /> {activeMarket === "retail" ? `Watching ${data?.stores.length ?? 5} stores` : `${data?.usedOffers.length ?? 0} verified used listings`}</span>
           {data?.publicPreview && <span className="beta-badge">Public beta</span>}
-          {!data?.publicPreview && <button className="analytics-button" onClick={openAnalytics}>Analytics</button>}
+          {adminView && <button className="analytics-button" onClick={openAnalytics}>Analytics</button>}
           <label className="top-grip-select">
             <span>Grip</span>
             <select value={data?.gripSize ?? "L3"} onChange={(event) => changeGripSize(event.target.value as GripSize)} aria-label="Preferred grip size">
               {gripOptions.map((option) => <option value={option.key} key={`top-${option.key}`}>{option.key} — {option.inches}</option>)}
             </select>
           </label>
-          <button className="settings-button" onClick={() => setSettingsOpen(true)} aria-label={data?.publicPreview ? "Open my Baseline preferences" : "Open tracker settings"}><span className="settings-desktop-label">{data?.publicPreview ? "My picks" : "Settings"}</span><span className="settings-mobile-label" aria-hidden="true">☰</span></button>
+          <TermHelp term="grip" label="How to find your grip size" />
+          <button className="settings-button" onClick={() => setSettingsOpen(true)} aria-label={adminView ? "Open tracker settings" : "Open my Baseline preferences"}><span className="settings-desktop-label">{adminView ? "Settings" : "My picks"}</span><span className="settings-mobile-label" aria-hidden="true">☰</span></button>
           {activeMarket === "retail" ? (
-            !data?.publicPreview && <button className={`alert-toggle ${notifications ? "on" : ""}`} onClick={toggleNotifications}>
+            adminView && <button className={`alert-toggle ${notifications ? "on" : ""}`} onClick={toggleNotifications}>
               <span aria-hidden="true">{notifications ? "●" : "○"}</span>
               {notifications ? "Alerts on" : "Turn on alerts"}
             </button>
@@ -513,6 +547,10 @@ export function BaselineApp() {
         onOpportunityModeChange={setOpportunityMode}
         onShowRetailers={showRetailers}
         onOpenRacquet={openRacquet}
+        showStartHere={showStartHere}
+        onStartCoach={openCoach}
+        onBrowseRacquets={browseRacquets}
+        onHideStartHere={hideStartHere}
       />
 
       <section className="watchlist" id="browse-market">
@@ -520,13 +558,21 @@ export function BaselineApp() {
           <nav className="brand-nav" aria-label="Browse equipment categories">
             <button className={activeBrand === "all" ? "active" : ""} aria-pressed={activeBrand === "all"} onClick={() => setActiveBrand("all")}>My watchlist</button>
             <button className={racquetBrandActive ? "active" : ""} aria-pressed={racquetBrandActive} onClick={() => { setActiveBrand("catalogue"); catalogue.resetPaging(); }}>Racquets</button>
-            <button className={activeBrand === "special" ? "active" : ""} aria-pressed={activeBrand === "special"} onClick={() => setActiveBrand("special")}>Special editions</button>
             <button className={activeBrand === "strings" ? "active" : ""} aria-pressed={activeBrand === "strings"} onClick={() => { setActiveBrand("strings"); stringMarket.resetPaging(); }}>Strings</button>
-            <button className={activeBrand === "balls" ? "active" : ""} aria-pressed={activeBrand === "balls"} onClick={() => { setActiveBrand("balls"); ballMarket.resetPaging(); }}>Balls</button>
-            <button className={activeBrand === "accessories" ? "active" : ""} aria-pressed={activeBrand === "accessories"} onClick={() => { setActiveBrand("accessories"); accessoryMarket.resetPaging(); }}>Accessories</button>
+            <button className={learnActive ? "active" : ""} aria-pressed={learnActive} onClick={() => { if (!learnActive) setActiveBrand("guide"); }}>Learn</button>
+            <button className={`brand-nav-more ${moreActive ? "active" : ""}`} aria-expanded={moreOpen || moreActive} aria-controls="brand-nav-more" onClick={() => setMoreOpen((open) => !open)}>More <span aria-hidden="true">{moreOpen || moreActive ? "▴" : "▾"}</span></button>
+          </nav>
+          {(moreOpen || moreActive) && <nav className="brand-subnav" id="brand-nav-more" aria-label="More equipment">
+            {moreSections.map((section) => <button key={section.key} className={activeBrand === section.key ? "active" : ""} aria-pressed={activeBrand === section.key} onClick={() => {
+              setActiveBrand(section.key);
+              if (section.key === "balls") ballMarket.resetPaging();
+              if (section.key === "accessories") accessoryMarket.resetPaging();
+            }}>{section.label}</button>)}
+          </nav>}
+          {learnActive && <nav className="brand-subnav" aria-label="Guides">
             <button className={activeBrand === "guide" ? "active" : ""} aria-pressed={activeBrand === "guide"} onClick={() => setActiveBrand("guide")}>Racquet guide</button>
             <button className={activeBrand === "string-guide" ? "active" : ""} aria-pressed={activeBrand === "string-guide"} onClick={() => setActiveBrand("string-guide")}>String guide</button>
-          </nav>
+          </nav>}
           {racquetBrandActive && <label className="racquet-brand-picker">
             <span>Brand</span>
             <select value={activeBrand} onChange={(event) => { setActiveBrand(event.target.value as BrandViewKey); catalogue.resetPaging(); }} aria-label="Choose a racquet brand">
@@ -562,9 +608,9 @@ export function BaselineApp() {
       <section className="how-it-works">
         <p className="eyebrow">HOW IT WORKS</p>
         <div className="steps">
-          <div><span>01</span><strong>We check</strong><p>Enabled Canadian retailers, every 3 hours.</p></div>
+          <div><span>01</span><strong>We check</strong><p>Canadian tennis stores, every 3 hours.</p></div>
           <div><span>02</span><strong>We compare</strong><p>{activeBrand === "accessories" ? "Only in-stock racquet accessories in CAD, grouped across retailers." : activeBrand === "balls" ? "Only matching tennis-ball packages in CAD—never a single can against a case." : activeBrand === "strings" ? "Only in-stock tennis strings in CAD, grouped by family and gauge." : "Only new, in-stock frames in CAD—no demo noise."}</p></div>
-          <div><span>03</span><strong>You save</strong><p>Set your price and jump directly to the retailer.</p></div>
+          <div><span>03</span><strong>You save</strong><p>Set a target price, then buy straight from the store.</p></div>
         </div>
       </section>
       </> : <UsedMarket
@@ -582,7 +628,7 @@ export function BaselineApp() {
 
       <nav className="mobile-dock" aria-label="Quick navigation">
         <button onClick={() => { setActiveMarket("retail"); setActiveBrand("all"); document.getElementById("top")?.scrollIntoView({ behavior: "smooth" }); }}><span aria-hidden="true">⌂</span>Home</button>
-        <button onClick={() => { setActiveMarket("retail"); setActiveBrand("catalogue"); document.getElementById("browse-market")?.scrollIntoView({ behavior: "smooth" }); }}><span aria-hidden="true">⌕</span>Browse</button>
+        <button onClick={() => { setActiveMarket("retail"); setActiveBrand("catalogue"); document.getElementById("browse-market")?.scrollIntoView({ behavior: "smooth" }); }}><span aria-hidden="true">⌕</span>Racquets</button>
         <button onClick={() => changeMarket("used")}><span aria-hidden="true">♲</span>Used</button>
         <button disabled={compareKeys.length < 2} onClick={() => setComparisonOpen(true)}><span aria-hidden="true">⇄</span>Compare{compareKeys.length ? ` (${compareKeys.length})` : ""}</button>
       </nav>
@@ -630,8 +676,9 @@ export function BaselineApp() {
         strings={coachStrings}
         gripLabel={gripLabel(data?.gripSize ?? "L3")}
         raised={activeMarket === "retail" && compareKeys.length > 0}
+        open={coachOpen}
+        onOpenChange={(open) => (open ? openCoach() : setCoachOpen(false))}
         onCompare={compareCoachPicks}
-        onOpen={() => trackAnalytics("coach_open")}
         affiliateLinksOn={affiliateLinksOn}
       />
 
