@@ -6,12 +6,18 @@ import "./globals.css";
 // reads it from the page to confirm the site is ours.
 const impactSiteVerification = "e0b3cfa6-43f7-4c32-b222-5e440c3a14d2";
 
-export async function generateMetadata(): Promise<Metadata> {
+// The static (Cloudflare) build has no request to read the host from.
+async function siteUrl() {
+  if (process.env.BASELINE_STATIC === "1") return new URL(process.env.BASELINE_SITE_URL ?? "https://baseline-beta.besada.net");
   const requestHeaders = await headers();
   const host = requestHeaders.get("x-forwarded-host") ?? requestHeaders.get("host") ?? "localhost:3000";
   const localHost = /^(?:localhost|127[.]|10[.]|192[.]168[.]|172[.](?:1[6-9]|2\d|3[01])[.])/i.test(host);
   const protocol = requestHeaders.get("x-forwarded-proto") ?? (localHost ? "http" : "https");
-  const metadataBase = new URL(`${protocol}://${host}`);
+  return new URL(`${protocol}://${host}`);
+}
+
+export async function generateMetadata(): Promise<Metadata> {
+  const metadataBase = await siteUrl();
   return {
     metadataBase,
     title: "Baseline — Canadian racquet deal tracker",

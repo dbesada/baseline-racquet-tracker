@@ -8,6 +8,7 @@
   "scripts": {
     "dev": "vinext dev",
     "build": "vinext build",
+    "build:static": "node scripts/build-static.mjs",
     "start": "wrangler dev --config dist/server/wrangler.json --ip 0.0.0.0 --persist-to .wrangler/state",
     "start:loopback": "wrangler dev --config dist/server/wrangler.json --ip 127.0.0.1 --persist-to .wrangler/state",
     "test": "npm run build && node --test",

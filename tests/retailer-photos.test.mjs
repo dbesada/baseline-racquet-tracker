@@ -38,7 +38,7 @@ test("one photo per racquet, from the cheapest listing that has one", () => {
 
 test("the monitor saves listing photos and the page uses them only as a credited last resort", async () => {
   const read = (file) => readFile(new URL(`../${file}`, import.meta.url), "utf8");
-  const [monitor, relay, insights, dialogs] = await Promise.all([read("scripts/check-prices.mjs"), read("scripts/baseline-relay.mjs"), read("app/ui/dashboard-insights.ts"), read("app/ui/RacquetDialogs.tsx")]);
+  const [monitor, relay, insights, dialogs] = await Promise.all([read("scripts/check-prices.mjs"), read("scripts/dashboard-build.mjs"), read("app/ui/dashboard-insights.ts"), read("app/ui/RacquetDialogs.tsx")]);
   assert.match(monitor, /const photo = listingPhoto\(product, group\[0\]\?\.variant, origin, Boolean\(specialEditionName\(productName\)\)\);/);
   assert.match(monitor, /retailerPhotos: pickRetailerPhotos\(offers\),/);
   assert.match(relay, /dashboard\.retailerPhotos = state\.retailerPhotos \?\? \{\};/);

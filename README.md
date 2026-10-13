@@ -87,3 +87,13 @@ A racquet's pop-up has a **Price alert** block: a visitor chooses "when it reach
 - A target alert fires once when the best in-stock price reaches the target and again only after the price has gone back above it. An any-drop alert fires on each drop of the best price.
 - iPhone and iPad need Baseline added to the Home Screen first; the Android app's WebView cannot receive web push, so visitors there are told to use their browser.
 - `BASELINE_PUSH_SUBJECT` (default `https://baseline-beta.besada.net`) is the contact URL sent to push services.
+
+## Running on Cloudflare (free plans) instead of the NAS
+
+Being built alongside the NAS; the NAS stays the live site until the switch.
+
+- **Site:** `npm run build:static` exports the pages as plain files (`dist/client`). `cloudflare/worker.js` serves them as Workers static assets and answers only `/api/tracker` (the dashboard, streamed from KV), `/api/analytics`, `/go/<offer id>` and `/api/push/*` (D1). Config: `cloudflare/wrangler.jsonc`; tables: `cloudflare/schema.sql`.
+- **Price check:** `.github/workflows/cloudflare.yml` runs every 3 hours on GitHub Actions. It restores the last state and the owner's settings from KV, runs `scripts/check-prices.mjs`, builds the dashboard with `scripts/dashboard-build.mjs` (the same code the NAS relay uses) via `scripts/publish-cloudflare.mjs`, uploads it, refreshes the buy links and racquet prices in D1, and sends price alerts (`scripts/send-alerts-cloudflare.mjs`).
+- **Deploy:** the same workflow deploys the site on every merge to `main`.
+- **Switches:** both jobs stay off until the repository variable `CLOUDFLARE_ACCOUNT_ID` is set. They need the secrets `CLOUDFLARE_API_TOKEN` (Workers Scripts, Workers KV Storage and D1: Edit) and `BASELINE_VAPID_KEYS` (`{"publicKey","privateKey"}` for price alerts). Optional secrets for used listings: `APIFY_TOKEN`, `BROWSERLESS_TOKEN`, `MARKETPLACE_BROWSER_URL`, `EBAY_CLIENT_ID`, `EBAY_CLIENT_SECRET`.
+- **Settings:** the owner's settings are the KV key `settings.json` (same format as `direct-data/baseline-settings.json`). Admin editing on Cloudflare is not built yet.

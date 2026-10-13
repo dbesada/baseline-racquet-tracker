@@ -37,8 +37,8 @@ test("card names drop the words the tag and section already say", () => {
 });
 
 test("the relay sends the picked sale offers, and the racquet list loads more on scroll", async () => {
-  const relay = await readFile(new URL("../scripts/baseline-relay.mjs", import.meta.url), "utf8");
-  assert.match(relay, /dashboard\.saleOffers = pickSaleOffers\(offers\)/);
+  const builder = await readFile(new URL("../scripts/dashboard-build.mjs", import.meta.url), "utf8");
+  assert.match(builder, /dashboard\.saleOffers = pickSaleOffers\(offers\)/);
   const browser = await readFile(new URL("../app/ui/RacquetBrowser.tsx", import.meta.url), "utf8");
   assert.match(browser, /new IntersectionObserver/);
   assert.match(browser, /<button ref=\{moreButton\} className="catalogue-more"/);

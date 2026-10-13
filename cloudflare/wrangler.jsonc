@@ -1,0 +1,18 @@
+// Baseline on Cloudflare (free plan). Deployed by .github/workflows/cloudflare.yml.
+// The static site comes from `npm run build:static`; the Worker answers /api/* and /go/*.
+{
+  "name": "baseline",
+  "main": "worker.js",
+  "compatibility_date": "2026-10-01",
+  "assets": {
+    "directory": "../dist/client",
+    "binding": "ASSETS",
+    "not_found_handling": "404-page",
+    "run_worker_first": ["/api/*", "/go/*"]
+  },
+  "kv_namespaces": [{ "binding": "DATA", "id": "0f0620ab764b40c9954553d68876617d" }],
+  "d1_databases": [{ "binding": "DB", "database_name": "baseline", "database_id": "603e177d-31ea-4f5e-93c9-8d92b48fa9f5" }],
+  "vars": { "MARKET": "CA" },
+  "workers_dev": true,
+  "observability": { "enabled": true }
+}
