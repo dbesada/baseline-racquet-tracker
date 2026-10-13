@@ -15,6 +15,13 @@ const offerLists = ["specialOffers", "usedOffers", "stringOffers", "accessoryOff
 const listKinds = { specialOffers: "special", usedOffers: "used", stringOffers: "string", accessoryOffers: "accessory", ballOffers: "ball" };
 const dayMs = 24 * 60 * 60 * 1000;
 
+// Crawlers, link previews and scripts follow buy links too. They still get
+// redirected, but are not counted as visitor clicks. The user agent is only
+// looked at here and is never stored.
+export function looksAutomated(userAgent) {
+  return !userAgent || /bot|crawl|spider|slurp|preview|facebookexternalhit|embedly|curl|wget|python|httpclient|node-fetch|axios|headless|lighthouse|monitor/i.test(userAgent);
+}
+
 export function marketFrom(value) {
   return /^[A-Z]{2}$/.test(value ?? "") ? value : "CA";
 }
@@ -98,7 +105,7 @@ const notFoundPage = `<!doctype html><html lang="en"><head><meta charset="utf-8"
 // Without affiliate settings every click goes to the plain retailer link.
 const plainLinks = (offer, destination) => ({ url: destination, network: null });
 
-export function createOutboundRedirect({ readState, clickLogPath, market = "CA", affiliate = plainLinks, maxBytes = 5_000_000, retentionDays = 90, rememberDays = 7, now = Date.now }) {
+export function createOutboundRedirect({ readState, clickLogPath, market = "CA", affiliate = plainLinks, countClick = () => true, maxBytes = 5_000_000, retentionDays = 90, rememberDays = 7, now = Date.now }) {
   const recordClick = createClickLog({ path: clickLogPath, maxBytes, retentionDays, now });
   // A price check rewrites the state file and drops offers that sold out, but
   // a page loaded earlier still links to them. Remember every offer the relay
@@ -142,7 +149,7 @@ export function createOutboundRedirect({ readState, clickLogPath, market = "CA",
     }
     const link = affiliate(offer, destination);
     // Logging never throws, so it cannot stop the visitor reaching the retailer.
-    if (req.method === "GET") {
+    if (req.method === "GET" && countClick(req)) {
       await recordClick({ ts: new Date(now()).toISOString(), offerId, retailer: offer.store ?? "Unknown", market, network: link.network, kind: listed.kind ?? null, model: listed.model ?? null });
     }
     res.writeHead(302, { location: link.url, "cache-control": "no-store", "referrer-policy": "no-referrer" });

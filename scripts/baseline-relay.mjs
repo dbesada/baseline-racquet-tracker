@@ -9,7 +9,7 @@ import { createAuditLog } from "./audit-log.mjs";
 import { emptyAnalytics, recordEvent, reportDays, summarizeAnalytics } from "./analytics.mjs";
 import { readClickRows, weeklyRetailerClicks } from "./click-report.mjs";
 import { pickSaleOffers } from "../app/lib/sale-rack.js";
-import { createOutboundRedirect, marketFrom } from "./outbound-redirect.mjs";
+import { createOutboundRedirect, looksAutomated, marketFrom } from "./outbound-redirect.mjs";
 import { settingsAfterChange, settingsSnapshot } from "./persistent-settings.mjs";
 
 const upstream = `http://${process.env.BASELINE_UPSTREAM_HOST ?? "127.0.0.1"}:${process.env.BASELINE_UPSTREAM_PORT ?? "4001"}`;
@@ -46,6 +46,8 @@ const { handleOutbound, rememberOffers } = createOutboundRedirect({
   clickLogPath: clickLogFile,
   market,
   affiliate,
+  // Visitor clicks only: not the owner's admin site, and not crawlers.
+  countClick: (req) => isPublicPreviewRequest(req) && !looksAutomated(req.headers["user-agent"]),
 });
 const checkEveryMs = 3 * 60 * 60 * 1000;
 let activeCheck = null;
