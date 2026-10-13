@@ -10,9 +10,12 @@ $archive = Join-Path ([System.IO.Path]::GetTempPath()) "baseline-src-$Version-$(
 try {
   if ($root.StartsWith('\\')) {
     Set-Location "$($env:SystemDrive)\"
-    cmd.exe /d /c "pushd $root && npm.cmd test"
+    # Install any packages added since the last release, then test.
+    cmd.exe /d /c "pushd $root && npm.cmd install --no-audit --no-fund && npm.cmd test"
   } else {
     Set-Location $root
+    npm.cmd install --no-audit --no-fund
+    if ($LASTEXITCODE -ne 0) { throw 'Packages could not be installed; release cancelled.' }
     npm.cmd test
   }
   if ($LASTEXITCODE -ne 0) { throw 'Tests failed; release cancelled.' }
