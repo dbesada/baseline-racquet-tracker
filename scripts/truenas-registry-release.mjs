@@ -83,6 +83,23 @@ async function deleteApp(name) {
   }
 }
 
+// TrueNAS finishes writing an uploaded file in the background, so the upload
+// can answer before the file exists. Wait for it (up to a minute) instead of
+// failing the release on the first look.
+async function waitForFile(remotePath, timeoutMs = 60_000) {
+  const started = Date.now();
+  for (;;) {
+    try {
+      const stored = await rpc("filesystem.stat", [remotePath]);
+      if (stored?.size) return stored;
+    } catch (error) {
+      if (Date.now() - started >= timeoutMs) throw error;
+    }
+    if (Date.now() - started >= timeoutMs) return null;
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+  }
+}
+
 async function ensureRegistry() {
   const registries = await rpc("app.registry.query", [[], {}]);
   registryCredentials = registries.find((entry) => String(entry.uri).replace(/\/$/, "") === registryUri);
@@ -102,7 +119,7 @@ async function uploadRegistryPassword() {
     signal: AbortSignal.timeout(45_000),
   });
   if (!response.ok) throw new Error(`Registry credential upload returned HTTP ${response.status}`);
-  const stored = await rpc("filesystem.stat", [remotePasswordFile]);
+  const stored = await waitForFile(remotePasswordFile);
   if (!stored?.size) throw new Error("The registry credential was not written to TrueNAS");
 }
 
@@ -199,7 +216,7 @@ async function main() {
     } catch (error) {
       console.warn(`Upload response did not close cleanly; verifying the uploaded file (${error.message})`);
     }
-    const uploaded = await rpc("filesystem.stat", [remoteArchive]);
+    const uploaded = await waitForFile(remoteArchive);
     if (!uploaded?.size) throw new Error("The source archive was not written to TrueNAS");
 
     await ensureRegistry();
