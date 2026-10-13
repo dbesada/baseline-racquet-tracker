@@ -38,13 +38,21 @@ export function emptyAnalytics(now = Date.now()) {
 }
 
 // Adds one event to `analytics` (mutated) and returns whether it was accepted.
+// The accepted event and its cleaned detail (null when it has none), or null
+// for an unknown event.
+export function acceptEvent(event, detail) {
+  if (!Object.hasOwn(detailRules, event)) return null;
+  const rule = detailRules[event];
+  return { event, detail: rule && detail ? rule(String(detail)) : null };
+}
+
 export function recordEvent(analytics, event, detail, now = Date.now()) {
-  if (!Object.hasOwn(detailRules, event)) return false;
+  const accepted = acceptEvent(event, detail);
+  if (!accepted) return false;
   const day = new Date(now).toISOString().slice(0, 10);
   const bucket = analytics.days[day] ?? { events: {}, details: {} };
   bucket.events[event] = (bucket.events[event] ?? 0) + 1;
-  const rule = detailRules[event];
-  const value = rule && detail ? rule(String(detail)) : null;
+  const value = accepted.detail;
   if (value && event === "browse_section") {
     // Kept in the original place so earlier days still read the same way.
     bucket.details[value] = (bucket.details[value] ?? 0) + 1;

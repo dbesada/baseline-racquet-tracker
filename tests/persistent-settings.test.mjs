@@ -71,12 +71,10 @@ test("the relay saves only the changed setting after a PATCH", () => {
   assert.doesNotMatch(relay, /writePersistentSettings\(settingsSnapshot\(updatedDashboard\)\)/);
 });
 
-test("saved targets for models no longer in the catalogue are not shown", () => {
-  // The relay lays the saved file over the API's dashboard. Run its function
-  // directly: it uses nothing outside the slice.
-  const relay = fs.readFileSync(new URL("../scripts/baseline-relay.mjs", import.meta.url), "utf8");
-  const source = relay.slice(relay.indexOf("function savedPricesForKnownModels"), relay.indexOf("function sendJson"));
-  const applyPersistentSettings = Function(`${source}; return applyPersistentSettings;`)();
+test("saved targets for models no longer in the catalogue are not shown", async () => {
+  // The relay (and the Cloudflare price check) lay the saved file over the
+  // API's dashboard with this shared function.
+  const { applyPersistentSettings } = await import("../scripts/dashboard-build.mjs");
   const dashboard = applyPersistentSettings(
     { targets: { "dunlop-cx-400-tour": 225, "pure-aero-98": 250 }, usedTargets: { "dunlop-cx-400-tour": 155 }, retailers: [] },
     { targets: { "cx-400-tour": 230, "pure-aero-98": 210 }, usedTargets: { "cx-400-tour": 155, "dunlop-cx-400-tour": 140 } },

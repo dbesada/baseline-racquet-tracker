@@ -17,11 +17,13 @@ test("ships the finished Baseline tracker and its price API", async () => {
     readUiSource(),
     readFile(new URL("../app/ui/BaselineCoach.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
-    readFile(new URL("../app/api/tracker/route.ts", import.meta.url), "utf8"),
+    // The route's catalogue settings live in app/lib/tracker-catalogue.js.
+    Promise.all(["../app/api/tracker/route.ts", "../app/lib/tracker-catalogue.js"].map((file) => readFile(new URL(file, import.meta.url), "utf8"))).then((parts) => parts.join("\n")),
     readFile(new URL("../app/layout.tsx", import.meta.url), "utf8"),
     readFile(new URL("../.openai/hosting.json", import.meta.url), "utf8"),
     readFile(new URL("../scripts/check-prices.mjs", import.meta.url), "utf8"),
-    readFile(new URL("../scripts/baseline-relay.mjs", import.meta.url), "utf8"),
+    // The relay builds its dashboard with scripts/dashboard-build.mjs.
+    Promise.all(["../scripts/baseline-relay.mjs", "../scripts/dashboard-build.mjs"].map((file) => readFile(new URL(file, import.meta.url), "utf8"))).then((parts) => parts.join("\n")),
     readFile(new URL("../scripts/truenas-registry-release.mjs", import.meta.url), "utf8"),
   ]);
 
@@ -296,7 +298,8 @@ test("ships an installable mobile experience with guarded native releases", asyn
   const [ui, layout, manifest, serviceWorker, privacy, capacitor, androidBuild, androidManifest, mobilePackage] = await Promise.all([
     readUiSource(),
     readFile(new URL("../app/layout.tsx", import.meta.url), "utf8"),
-    readFile(new URL("../app/manifest.ts", import.meta.url), "utf8"),
+    // The manifest's content lives in app/lib/web-manifest.js.
+    Promise.all(["../app/manifest.ts", "../app/lib/web-manifest.js"].map((file) => readFile(new URL(file, import.meta.url), "utf8"))).then((parts) => parts.join("\n")),
     readFile(new URL("../public/sw.js", import.meta.url), "utf8"),
     readFile(new URL("../app/privacy/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../android-wrapper/capacitor.config.ts", import.meta.url), "utf8"),
