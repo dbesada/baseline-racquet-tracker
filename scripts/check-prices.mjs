@@ -10,7 +10,23 @@ function delay(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-async function resilientFetch(input, init = {}) {
+// Many Canadian Shopify stores show US-dollar prices to visitors outside
+// Canada (GitHub's servers, which run the Cloudflare price check, are in the
+// US). Asking for Canadian dollars explicitly keeps every price in CAD wherever
+// the check runs: currency=CAD on store product and collection requests, plus
+// Shopify's Canadian market cookies.
+export function inCanadianDollars(input, init = {}) {
+  let url;
+  try { url = new URL(String(input)); } catch { return [input, init]; }
+  if (!/^https?:$/.test(url.protocol) || !/\/(?:products|collections)(?:\/|\.json)/.test(url.pathname) || /(^|\.)(amazon|ebay|apify)\./.test(url.hostname)) return [input, init];
+  if (!url.searchParams.has("currency")) url.searchParams.set("currency", "CAD");
+  const headers = new Headers(init.headers ?? {});
+  headers.set("cookie", [headers.get("cookie"), "localization=CA", "cart_currency=CAD"].filter(Boolean).join("; "));
+  return [url.href, { ...init, headers }];
+}
+
+async function resilientFetch(rawInput, rawInit = {}) {
+  const [input, init] = inCanadianDollars(rawInput, rawInit);
   const attempts = /localhost|127[.]0[.]0[.]1|192[.]168[.]/.test(String(input)) ? 1 : 3;
   let lastResponse;
   for (let attempt = 0; attempt < attempts; attempt += 1) {
