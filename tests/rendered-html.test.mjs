@@ -604,3 +604,10 @@ test("does not confuse manufacturer model suffixes on family pages", async () =>
   const page = "Yonex Percept 100D dense pattern. Yonex Percept 100 open pattern.";
   assert.equal(exactOfficialLabelIndex(page, "Yonex Percept 100"), page.lastIndexOf("Yonex Percept 100"));
 });
+
+test("pre-order labels stop once a racquet is in stock", async () => {
+  const route = await readFile(new URL("../app/api/tracker/route.ts", import.meta.url), "utf8");
+  assert.doesNotMatch(route, /Pre-order · Aug 21/);
+  const browser = await readFile(new URL("../app/ui/RacquetBrowser.tsx", import.meta.url), "utf8");
+  assert.match(browser, /const preorder = release\?\.releaseStatus === "preorder" && !inStock\.some/);
+});
