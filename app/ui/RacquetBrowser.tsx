@@ -7,6 +7,8 @@ import { CardSpecs, PatternBadge, PlayerFit, RacquetImage, RacquetName } from ".
 import { SaleRack } from "./SaleRack";
 import { TermHelp } from "./TermTip";
 
+const preorderTitle = /pre[- ]?order|preorder|reserve now|coming soon/i;
+
 // Browse views that are not racquet lists.
 const nonRacquetViews: BrandViewKey[] = ["special", "strings", "balls", "accessories", "guide", "string-guide"];
 
@@ -201,7 +203,10 @@ function ModelCard({ modelKey, index, featured, cards }: { modelKey: string; ind
   const inStock = offers.filter((offer) => offer.inStock && offer.currentPrice !== null)
     .sort((a, b) => (a.currentPrice ?? Infinity) - (b.currentPrice ?? Infinity));
   const release = data?.modelOptions.find((option) => option.key === modelKey);
-  const preorderOffers = offers.filter((offer) => offer.currentPrice !== null && /pre[- ]?order|preorder|reserve now|coming soon/i.test(offer.title));
+  const preorderOffers = offers.filter((offer) => offer.currentPrice !== null && preorderTitle.test(offer.title));
+  // A "pre-order" or "coming soon" label stops applying once a store has the racquet in stock.
+  const preorder = release?.releaseStatus === "preorder" && !inStock.some((offer) => !preorderTitle.test(offer.title));
+  const releaseLabel = release?.releaseStatus === "preorder" && !preorder ? null : release?.releaseLabel;
   const available = uniqueRetailerOffers([...inStock, ...preorderOffers]);
   const best = available[0];
   const target = data?.targets[modelKey] ?? 0;
@@ -218,7 +223,7 @@ function ModelCard({ modelKey, index, featured, cards }: { modelKey: string; ind
         <span className="model-number">{featured && activeBrand !== "all" ? "FEATURED" : String(index + 1).padStart(2, "0")}</span>
         <div className="card-controls">
           <button className={`compare-toggle ${selected ? "selected" : ""}`} disabled={compareFull} onClick={() => cards.onToggleCompare(modelKey)}>{selected ? "✓ Compare" : "+ Compare"}</button>
-          <span className={`deal-pill ${belowTarget ? "hit" : release?.releaseStatus === "preorder" ? "preorder" : release?.releaseStatus === "new" ? "new-release" : ""}`}>{belowTarget ? "Target hit" : release?.releaseLabel ?? "Watching"}</span>
+          <span className={`deal-pill ${belowTarget ? "hit" : preorder ? "preorder" : release?.releaseStatus === "new" ? "new-release" : ""}`}>{belowTarget ? "Target hit" : releaseLabel ?? "Watching"}</span>
         </div>
       </div>
       <div className="model-identity">
@@ -226,7 +231,7 @@ function ModelCard({ modelKey, index, featured, cards }: { modelKey: string; ind
         <RacquetImage modelKey={modelKey} spec={spec} className="model-thumbnail" width={122} height={158} alt={`${data?.modelNames[modelKey] ?? modelKey} racquet`} sizes="122px" onPreview={cards.onOpenRacquet} action="details" />
       </div>
       <div className="price-row">
-        <div><span className="price-label">{best?.sourceState === "stale" ? "LAST VERIFIED PRICE" : release?.releaseStatus === "preorder" ? "BEST PRE-ORDER PRICE" : "BEST IN-STOCK PRICE"}</span><strong className="price">{best?.currentPrice != null ? money.format(best.currentPrice) : "—"}</strong></div>
+        <div><span className="price-label">{best?.sourceState === "stale" ? "LAST VERIFIED PRICE" : preorder ? "BEST PRE-ORDER PRICE" : "BEST IN-STOCK PRICE"}</span><strong className="price">{best?.currentPrice != null ? money.format(best.currentPrice) : "—"}</strong></div>
         <div className="sparkbars" aria-label="Recent lowest price trend">
           {history.length ? history.map((row, i) => <i key={`${row.checkedAt}-${i}`} style={{ height: `${28 + ((max - row.price) / Math.max(max - min, 1)) * 42}%` }} />) : <span>No history yet</span>}
         </div>
@@ -247,7 +252,7 @@ function ModelCard({ modelKey, index, featured, cards }: { modelKey: string; ind
             <span className="rank">{offerIndex + 1}</span><span className="store"><strong>{offer.store}</strong><small>{offer.sourceState === "stale" ? `Last verified ${relativeTime(offer.lastChecked)}` : offer.gripSizes.length ? `${offer.gripSizes.length} grip sizes` : "Check grip sizes"}</small></span>
             <span className="offer-price"><strong>{money.format(offer.currentPrice ?? 0)}</strong>{dropped && <small>↓ {money.format((offer.previousPrice ?? 0) - (offer.currentPrice ?? 0))}</small>}</span><span className="arrow" aria-hidden="true">↗</span>
           </a>;
-        }) : <p className="empty">{release?.releaseStatus === "preorder" ? "No Canadian pre-order match found yet. Baseline will keep checking." : "No in-stock match found today."}</p>}
+        }) : <p className="empty">{preorder ? "No Canadian pre-order match found yet. Baseline will keep checking." : "No in-stock match found today."}</p>}
       </div>
       {available.length > 0 && <button className="all-retailers-button" onClick={() => cards.onShowRetailers(modelKey)}>
         <span>Compare every store</span><strong>{available.length} {available.length === 1 ? "store" : "stores"}</strong><i aria-hidden="true">→</i>

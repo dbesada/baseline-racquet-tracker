@@ -217,11 +217,9 @@ const newReleaseModelKeys = new Set([
   "speed-pro-2026", "speed-mp", "speed-tour", "extreme-pro-2026", "extreme-mp-2026", "extreme-mp-xl-2026", "extreme-mp-l-2026", "extreme-mp-ul-2026", "extreme-team-2026", "extreme-elite-2026", "boom-pro", "boom-mp", "boom-mp-l-2026", "boom-mp-ul-2026", "boom-elite-2026", "squared-2026",
   "fire-305s", "fire-300", "fire-285", "fire-270",
 ]);
+// Racquets announced but not yet released. Remove an entry once it ships;
+// the page also stops calling a racquet a pre-order once a store has it in stock.
 const preorderModelLabels: Record<string, string> = {
-  "defyer-98-pro-v1": "Pre-order · Aug 21",
-  "defyer-100-v1": "Pre-order · Aug 21",
-  "defyer-100l-v1": "Pre-order · Aug 21",
-  "defyer-100ul-v1": "Pre-order · Aug 21",
   "boom-team-2026": "Coming soon",
   "ig-boom-xceed-2026": "Coming soon",
 };
