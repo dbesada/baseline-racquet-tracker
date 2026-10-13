@@ -1,5 +1,5 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
-import { classify, classifyUsed, isAccessory, parseAmazonPrice, decodeHtmlAttribute, productJsonLd, jsonLdOffer } from "../app/lib/catalog-matching.js";
+import { classify, classifyPageText, classifyUsed, isAccessory, parseAmazonPrice, decodeHtmlAttribute, productJsonLd, jsonLdOffer } from "../app/lib/catalog-matching.js";
 import { defaultTargets, modelNames } from "../app/lib/racquet-catalogue.js";
 import { listingPhoto, pickRetailerPhotos } from "../app/lib/retailer-photos.js";
 
@@ -607,7 +607,7 @@ async function fetchManufacturerSpec(modelKey) {
   for (const productUrl of candidateOfficialLinks(html, searchUrl, modelName)) {
     let pageHtml;
     try { pageHtml = await fetchOfficialPage(productUrl); } catch { continue; }
-    if (classify(plainText(pageHtml).slice(0, 5000)) !== modelKey) continue;
+    if (classifyPageText(plainText(pageHtml).slice(0, 5000)) !== modelKey) continue;
     const spec = extractRacquetSpecs(pageHtml, `${manufacturer} official`, productUrl);
     if (spec) return spec;
   }
@@ -625,7 +625,7 @@ async function fetchManufacturerSpec(modelKey) {
     for (const productUrl of candidateOfficialLinks(renderedHtml, searchUrl, modelName)) {
       let pageHtml;
       try { pageHtml = await renderedMarketplaceHtml(productUrl); } catch { continue; }
-      if (classify(plainText(pageHtml).slice(0, 5000)) !== modelKey) continue;
+      if (classifyPageText(plainText(pageHtml).slice(0, 5000)) !== modelKey) continue;
       const spec = extractRacquetSpecs(pageHtml, `${manufacturer} official`, productUrl);
       if (spec) return spec;
     }
