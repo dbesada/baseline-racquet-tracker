@@ -9,6 +9,8 @@ import { createAuditLog } from "./audit-log.mjs";
 import { emptyAnalytics, recordEvent, reportDays, summarizeAnalytics } from "./analytics.mjs";
 import { readClickRows, weeklyRetailerClicks } from "./click-report.mjs";
 import { pickSaleOffers } from "../app/lib/sale-rack.js";
+import { modelNames as catalogueModelNames } from "../app/lib/racquet-catalogue.js";
+import { bestPrices, createPriceAlerts } from "./price-alerts.mjs";
 import { createOutboundRedirect, looksAutomated, marketFrom } from "./outbound-redirect.mjs";
 import { settingsAfterChange, settingsSnapshot } from "./persistent-settings.mjs";
 
@@ -18,6 +20,11 @@ const stateFile = "/app/.data/baseline-monitor.json";
 const settingsFile = "/app/.data/baseline-settings.json";
 const analyticsFile = "/app/.data/baseline-analytics.json";
 const clickLogFile = "/app/.data/baseline-clicks.jsonl";
+const priceAlerts = createPriceAlerts({
+  storePath: "/app/.data/baseline-price-alerts.json",
+  keysPath: "/app/.data/baseline-push-keys.json",
+  subject: process.env.BASELINE_PUSH_SUBJECT ?? "https://baseline-beta.besada.net",
+});
 const ebayDeletionTokenFile = process.env.EBAY_DELETION_TOKEN_FILE ?? "/app/.data/ebay-deletion-token";
 const ebayDeletionEndpoint = process.env.EBAY_DELETION_ENDPOINT
   ?? "https://nasbesada.tail0731b8.ts.net:8443/api/ebay/account-deletion";
@@ -127,6 +134,14 @@ function runPriceCheck(forceModelAudit = false) {
   }).then(async (ok) => {
     dashboardCache = null;
     dashboardCachedAt = 0;
+    if (ok) {
+      try {
+        const sent = await priceAlerts.notifyAfterCheck(JSON.parse(await readFile(stateFile, "utf8")), catalogueModelNames);
+        if (sent) console.log(`Sent ${sent} price alert${sent === 1 ? "" : "s"}`);
+      } catch (error) {
+        console.warn(`Price alerts were not sent: ${error.message}`);
+      }
+    }
     if (forceModelAudit) {
       let results = [];
       let checkedAt = new Date().toISOString();
@@ -471,6 +486,81 @@ async function handleAnalytics(req, res) {
   sendJson(req, res, { ...summarizeAnalytics(analytics, { clicks, dashboard, days }), retailerWeeks: weeklyRetailerClicks(clicks) });
 }
 
+// Reads a small JSON body (price-alert requests are well under 4 KB).
+function readSmallJson(req, limit = 8192) {
+  return new Promise((resolve) => {
+    let size = 0;
+    const chunks = [];
+    req.on("data", (chunk) => {
+      size += chunk.length;
+      if (size > limit) { req.destroy(); resolve(null); return; }
+      chunks.push(chunk);
+    });
+    req.on("end", () => {
+      try {
+        const value = JSON.parse(Buffer.concat(chunks).toString("utf8"));
+        resolve(value && typeof value === "object" && !Array.isArray(value) ? value : null);
+      } catch { resolve(null); }
+    });
+    req.on("error", () => resolve(null));
+  });
+}
+
+// A simple brake on alert changes: 300 a minute for the whole site.
+let alertWrites = { minute: 0, count: 0 };
+function alertWriteAllowed() {
+  const minute = Math.floor(Date.now() / 60000);
+  if (alertWrites.minute !== minute) alertWrites = { minute, count: 0 };
+  alertWrites.count += 1;
+  return alertWrites.count <= 300;
+}
+
+function sendAlertJson(res, status, payload) {
+  const body = JSON.stringify(payload);
+  res.writeHead(status, { "content-type": "application/json; charset=utf-8", "content-length": Buffer.byteLength(body), "cache-control": "no-store" });
+  res.end(body);
+}
+
+// /api/push/key (GET), /api/push/alerts, /api/push/alert, /api/push/remove (POST).
+async function handlePriceAlerts(req, res) {
+  const path = new URL(req.url, "http://baseline.local").pathname;
+  if (path === "/api/push/key" && req.method === "GET") {
+    sendAlertJson(res, 200, { publicKey: await priceAlerts.publicKey() });
+    return;
+  }
+  if (req.method !== "POST" || !["/api/push/alerts", "/api/push/alert", "/api/push/remove"].includes(path)) {
+    sendAlertJson(res, 404, { error: "Not found" });
+    return;
+  }
+  if (path !== "/api/push/alerts" && !alertWriteAllowed()) {
+    sendAlertJson(res, 429, { error: "Too many alert changes right now. Please try again in a minute." });
+    return;
+  }
+  const body = await readSmallJson(req);
+  if (!body) {
+    sendAlertJson(res, 400, { error: "The alert request could not be read." });
+    return;
+  }
+  if (path === "/api/push/alerts") {
+    sendAlertJson(res, 200, await priceAlerts.listAlerts(body));
+    return;
+  }
+  const modelKey = typeof body.modelKey === "string" && Object.hasOwn(catalogueModelNames, body.modelKey) ? body.modelKey : null;
+  if (path === "/api/push/remove") {
+    const result = await priceAlerts.removeAlert({ subscription: body.subscription, modelKey });
+    sendAlertJson(res, result.error ? 400 : 200, result);
+    return;
+  }
+  if (!modelKey) {
+    sendAlertJson(res, 400, { error: "That racquet is not tracked." });
+    return;
+  }
+  let currentPrice = null;
+  try { currentPrice = bestPrices(JSON.parse(await readFile(stateFile, "utf8"))).get(modelKey)?.price ?? null; } catch { /* No price check yet. */ }
+  const result = await priceAlerts.setAlert({ subscription: body.subscription, modelKey, mode: body.mode, target: Number(body.target), currentPrice });
+  sendAlertJson(res, result.error ? 400 : 200, result);
+}
+
 async function handleEbayAccountDeletion(req, res) {
   const url = new URL(req.url, ebayDeletionEndpoint);
   if (req.method === "HEAD") {
@@ -544,6 +634,10 @@ http.createServer(async (req, res) => {
   await classifyRequest(req).catch(() => publicPreviewByRequest.set(req, true));
   if (req.url?.startsWith("/api/tracker")) {
     handleTracker(req, res).catch((error) => { res.writeHead(502); res.end(`Price service error: ${error.message}`); });
+    return;
+  }
+  if (req.url?.startsWith("/api/push/")) {
+    handlePriceAlerts(req, res).catch(() => { if (!res.headersSent) { res.writeHead(500); res.end(); } });
     return;
   }
   if (req.url?.startsWith("/api/analytics")) {

@@ -7,6 +7,7 @@ import { AffiliateNote } from "./AffiliateNote";
 import type { Dashboard, Offer, RacquetSpec } from "./baseline-types";
 import { maxCompareFrames, modelBrand, modelImage, money, outboundHref, outboundRel, patternPresentation, relativeTime, standardizedSpecDisplay, validationPresentation } from "./baseline-catalogue";
 import { racquetHash } from "./racquet-link";
+import { PriceAlertControl } from "./PriceAlertControl";
 import { PatternBadge, PlayerFit, RacquetImage } from "./racquet-visuals";
 import { TermHelp, type GlossaryTerm } from "./TermTip";
 
@@ -60,7 +61,7 @@ function CopyRacquetLink({ modelKey }: { modelKey: string }) {
 // A racquet's own pop-up: its full specifications and every retailer's price.
 // Opened from a racquet's name or photo (Specs tab) or "Browse every retailer"
 // (Retailers tab).
-export function RetailerDialog({ modelKey, data, offers, spec, tab, compared, compareFull, onTabChange, onToggleCompare, onPreviewImage, onClose }: {
+export function RetailerDialog({ modelKey, data, offers, spec, tab, compared, compareFull, onTabChange, onToggleCompare, onPreviewImage, onAlertSaved, onClose }: {
   modelKey: string;
   data: Dashboard | null;
   offers: Offer[];
@@ -71,6 +72,7 @@ export function RetailerDialog({ modelKey, data, offers, spec, tab, compared, co
   onTabChange: (tab: RacquetDialogTab) => void;
   onToggleCompare: (modelKey: string) => void;
   onPreviewImage: (modelKey: string) => void;
+  onAlertSaved?: (mode: "target" | "drop") => void;
   onClose: () => void;
 }) {
   const modelName = data?.modelNames[modelKey] ?? modelKey;
@@ -96,6 +98,7 @@ export function RetailerDialog({ modelKey, data, offers, spec, tab, compared, co
             <button className={`racquet-dialog-compare ${compared ? "on" : ""}`} disabled={!compared && compareFull} onClick={() => onToggleCompare(modelKey)}>{compared ? "✓ In comparison" : compareFull ? "Comparison full" : "+ Compare"}</button>
           </div>
         </div>
+        <PriceAlertControl modelKey={modelKey} target={target} onSaved={onAlertSaved} />
         <div id="racquet-panel" role="tabpanel" aria-labelledby={tab === "specs" ? "racquet-tab-specs" : "racquet-tab-retailers"}>
         {tab === "specs" ? <>
           <PlayerFit spec={spec} />

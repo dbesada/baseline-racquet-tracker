@@ -77,3 +77,13 @@ Never commit API keys, browser profiles, personal data, local databases, or depl
 ## Deployment boundary
 
 This repo contains deployment configuration for the owner's TrueNAS environment. Repository access does not authorize deploying, changing live services, or publishing a release; make those changes only when the owner explicitly requests them.
+
+## Price alerts (browser notifications)
+
+A racquet's pop-up has a **Price alert** block: a visitor chooses "when it reaches my target" (with a price) or "on any price drop", and the browser asks for permission to show notifications. The relay handles `/api/push/key` (GET, the public signing key), `/api/push/alert`, `/api/push/remove` and `/api/push/alerts` (POST) in `scripts/price-alerts.mjs`, and after each full price check sends Web Push notifications with the free `web-push` package through the browser makers' push services (no third-party account).
+
+- `direct-data/baseline-price-alerts.json` holds each browser's push endpoint and keys with its alerts (mode, target, last price). Only Google, Mozilla, Apple and Microsoft push endpoints are accepted. No name, email, IP address or user agent is stored. Alerts are deleted when turned off; a subscription is deleted when its push service answers 404/410.
+- `direct-data/baseline-push-keys.json` holds the relay's VAPID key pair, created on first use (mode 600). Keep it: replacing it silently breaks existing subscriptions.
+- A target alert fires once when the best in-stock price reaches the target and again only after the price has gone back above it. An any-drop alert fires on each drop of the best price.
+- iPhone and iPad need Baseline added to the Home Screen first; the Android app's WebView cannot receive web push, so visitors there are told to use their browser.
+- `BASELINE_PUSH_SUBJECT` (default `https://baseline-beta.besada.net`) is the contact URL sent to push services.

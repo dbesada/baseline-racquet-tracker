@@ -168,6 +168,7 @@ export type AnalyticsSummary = {
     terms: Array<{ term: string; count: number }>;
     saleFilters: Array<{ filter: string; count: number }>;
     searchPicks: Array<{ modelKey: string; name: string; count: number }>;
+    alertsSet: Array<{ mode: string; count: number }>;
   };
   operations: { freshOffers: number; liveSources: number; totalSources: number; dropsLast24Hours: number; lastChecked: string | null };
   retailerWeeks?: RetailerWeeks;

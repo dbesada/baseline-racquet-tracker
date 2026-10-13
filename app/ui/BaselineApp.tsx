@@ -686,6 +686,7 @@ export function BaselineApp() {
         onTabChange={setRacquetTab}
         onToggleCompare={toggleCompare}
         onPreviewImage={setImagePreviewKey}
+        onAlertSaved={(mode) => trackAnalytics("alert_set", mode)}
         onClose={() => setRetailerModelKey(null)}
       />}
 
