@@ -1,0 +1,38 @@
+name: Price check trial
+
+# Runs one price check on GitHub's servers to see which stores answer from
+# here (step 1 of moving Baseline off the NAS). Started by hand only. It
+# changes nothing on the live site: the result is a job summary plus the
+# state file as a 7-day artifact. No secrets are used, so sources that need
+# API keys (eBay, Apify) are skipped.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      # The checker only uses Node's built-in modules and app/lib, so no npm install.
+      - name: Run one price check
+        run: node scripts/check-prices.mjs
+        env:
+          BASELINE_SETTINGS_FILE: /nonexistent/settings.json
+          BASELINE_URL: http://127.0.0.1:9
+      - name: Summarize
+        if: always()
+        run: node scripts/summarize-check.mjs .data/baseline-monitor.json >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: price-check-state
+          path: .data/baseline-monitor.json
+          retention-days: 7
