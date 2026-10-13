@@ -7,11 +7,13 @@ import { money, outboundHref, outboundRel, relativeTime } from "./baseline-catal
 import type { Opportunity } from "./dashboard-insights";
 import { PatternBadge, RacquetName } from "./racquet-visuals";
 
-export function RetailHero({ data, loading, checking, error, opportunities, opportunityMode, specs, showStartHere, search, onCheckNow, onOpportunityModeChange, onShowRetailers, onOpenRacquet, onStartCoach, onBrowseRacquets, onHideStartHere }: {
+export function RetailHero({ data, loading, checking, error, notice, opportunities, opportunityMode, specs, showStartHere, search, onCheckNow, onOpportunityModeChange, onShowRetailers, onOpenRacquet, onStartCoach, onBrowseRacquets, onHideStartHere }: {
   data: Dashboard | null;
   loading: boolean;
   checking: boolean;
   error: string;
+  /** A status line for the admin, such as "Price check started". */
+  notice?: string;
   opportunities: Opportunity[];
   opportunityMode: OpportunityMode;
   specs: Record<string, RacquetSpec>;
@@ -54,6 +56,7 @@ export function RetailHero({ data, loading, checking, error, opportunities, oppo
           <button className="start-here-close" onClick={onHideStartHere} data-analytics="start_here" data-analytics-detail="hide" aria-label="Hide this tip">×</button>
         </div>}
         {error && <p className="error" role="alert">{error}</p>}
+        {notice && !error && <p className="admin-notice" role="status">{notice}</p>}
       </div>
       <div className="court-card opportunity-court" aria-label="Best opportunity right now">
         <div className="court-lines"><span /><span /><span /></div>

@@ -81,6 +81,7 @@ export function BaselineApp() {
   const modelRefreshTimes = useRef(new Map<string, number>());
   const [modelFetchMessage, setModelFetchMessage] = useState("");
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
   const [notifications, setNotifications] = useState(false);
   const [editing, setEditing] = useState<string | null>(null);
   const [targetDraft, setTargetDraft] = useState("");
@@ -279,6 +280,17 @@ export function BaselineApp() {
     setInstallPrompt(null);
   };
 
+  // The NAS answers an admin change with the whole dashboard. Cloudflare saves
+  // the change, answers { ok, message } and republishes in the background, so
+  // the page applies the change itself straight away.
+  const adoptAnswer = useCallback(async (response: Response, local?: (current: Dashboard) => Dashboard) => {
+    const body = await response.json().catch(() => ({})) as Partial<Dashboard> & { error?: string; message?: string };
+    if (!response.ok) { if (body.error) setError(body.error); return; }
+    if (Array.isArray(body.offers)) { setData(body as Dashboard); return; }
+    if (local) setData((current) => (current ? local(current) : current));
+    if (body.message) setNotice(body.message);
+  }, []);
+
   const fetchNewModels = async () => {
     if (data?.publicPreview) {
       setModelFetchMessage("The public beta refreshes its catalogue automatically. New model scans are managed by Baseline.");
@@ -290,7 +302,12 @@ export function BaselineApp() {
     try {
       let response = await fetch("/api/tracker?action=models", { method: "POST" });
       if (!response.ok) throw new Error("The model catalogue refresh could not start.");
-      let next = await response.json() as Dashboard;
+      const first = await response.json() as Dashboard & { message?: string };
+      if (!Array.isArray(first.offers)) {
+        setModelFetchMessage(first.message ?? "Catalogue scan started.");
+        return;
+      }
+      let next: Dashboard = first;
       setData(next);
       for (let attempt = 0; attempt < 100 && next.modelRefresh?.status === "running"; attempt += 1) {
         setModelFetchMessage("Checking official manufacturer catalogues... You can keep browsing.");
@@ -325,7 +342,11 @@ export function BaselineApp() {
     try {
       const response = await fetch("/api/tracker?action=check", { method: "POST" });
       if (!response.ok) throw new Error("Price check failed. Please try again.");
-      const next = await response.json() as Dashboard;
+      const next = await response.json() as Dashboard & { message?: string };
+      if (!Array.isArray(next.offers)) {
+        setNotice(next.message ?? "Price check started.");
+        return;
+      }
       setData(next);
       const newDrops = next.offers.filter((offer) =>
         offer.currentPrice !== null && offer.previousPrice !== null && offer.currentPrice < offer.previousPrice,
@@ -375,7 +396,9 @@ export function BaselineApp() {
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ modelKey, targetPrice: value, market }),
     });
-    if (response.ok) setData(await response.json());
+    await adoptAnswer(response, (current) => market === "used"
+      ? { ...current, usedTargets: { ...current.usedTargets, [modelKey]: value } }
+      : { ...current, targets: { ...current.targets, [modelKey]: value } });
     setEditing(null);
   };
 
@@ -393,7 +416,10 @@ export function BaselineApp() {
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ retailerKey, enabled }),
     });
-    if (response.ok) setData(await response.json());
+    await adoptAnswer(response, (current) => {
+      const retailers = current.retailers.map((retailer) => (retailer.key === retailerKey ? { ...retailer, enabled } : retailer));
+      return { ...current, retailers, stores: retailers.filter((retailer) => retailer.enabled && retailer.kind !== "manual").map((retailer) => retailer.name) };
+    });
   };
 
   const changeGripSize = async (gripSize: GripSize) => {
@@ -410,7 +436,7 @@ export function BaselineApp() {
     const response = await fetch("/api/tracker", {
       method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ gripSize }),
     });
-    if (response.ok) setData(await response.json());
+    await adoptAnswer(response, (current) => ({ ...current, gripSize }));
   };
 
   const refreshSelectedModel = useCallback(async (modelKey: string) => {
@@ -421,8 +447,10 @@ export function BaselineApp() {
     setRefreshingModels((current) => new Set(current).add(modelKey));
     try {
       const response = await fetch(`/api/tracker?action=model&modelKey=${encodeURIComponent(modelKey)}`, { method: "POST" });
-      if (response.ok) setData(await response.json());
-      else modelRefreshTimes.current.delete(modelKey);
+      if (response.ok) {
+        const body = await response.json() as Partial<Dashboard>;
+        if (Array.isArray(body.offers)) setData(body as Dashboard);
+      } else modelRefreshTimes.current.delete(modelKey);
     } catch {
       modelRefreshTimes.current.delete(modelKey);
     } finally {
@@ -452,7 +480,11 @@ export function BaselineApp() {
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ slot, selectedModelKey }),
     });
-    if (response.ok) setData(await response.json());
+    await adoptAnswer(response, (current) => {
+      const modelOrder = [...current.modelOrder];
+      modelOrder[slot] = selectedModelKey;
+      return { ...current, modelOrder };
+    });
     void refreshSelectedModel(selectedModelKey);
   };
 
@@ -462,7 +494,11 @@ export function BaselineApp() {
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ featuredBrand, featuredSlot, selectedModelKey }),
     });
-    if (response.ok) setData(await response.json());
+    await adoptAnswer(response, (current) => {
+      const picks = [...(current.brandPicks?.[featuredBrand] ?? [])];
+      picks[featuredSlot] = selectedModelKey;
+      return { ...current, brandPicks: { ...current.brandPicks, [featuredBrand]: picks } };
+    });
     void refreshSelectedModel(selectedModelKey);
   };
 
@@ -574,6 +610,7 @@ export function BaselineApp() {
         loading={loading}
         checking={checking}
         error={error}
+        notice={notice}
         opportunities={opportunityChoices}
         opportunityMode={opportunityMode}
         specs={resolvedRacquetSpecs}

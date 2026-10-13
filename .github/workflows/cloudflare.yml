@@ -4,7 +4,9 @@ name: Cloudflare
 #   site    builds the static site and deploys the Worker (cloudflare/) on
 #           every merge to main, or by hand.
 #   prices  every 3 hours (or by hand): runs the price check, publishes the
-#           dashboard and buy links, and sends price alerts.
+#           dashboard and buy links, and sends price alerts. "publish" only
+#           rebuilds the dashboard from the last check with the current
+#           settings (the admin site starts it after a settings change).
 # Both stay off until the repository variable CLOUDFLARE_ACCOUNT_ID is set
 # (after the CLOUDFLARE_API_TOKEN secret exists).
 
@@ -18,8 +20,12 @@ on:
       job:
         description: What to run
         type: choice
-        options: [prices, site, both]
+        options: [prices, publish, site, both]
         default: prices
+      force_model_audit:
+        description: Also re-check the official model catalogues
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -32,7 +38,7 @@ env:
 
 jobs:
   site:
-    if: vars.CLOUDFLARE_ACCOUNT_ID != '' && (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.job != 'prices'))
+    if: vars.CLOUDFLARE_ACCOUNT_ID != '' && (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && (inputs.job == 'site' || inputs.job == 'both')))
     runs-on: ubuntu-latest
     concurrency: cloudflare-site
     steps:
@@ -51,12 +57,20 @@ jobs:
         run: |
           PUBLIC_KEY=$(node -e 'console.log(JSON.parse(process.env.BASELINE_VAPID_KEYS).publicKey)')
           $WRANGLER deploy --var "PUSH_PUBLIC_KEY:$PUBLIC_KEY"
+      - name: Give the admin site its GitHub token
+        env:
+          DISPATCH_TOKEN: ${{ secrets.BASELINE_DISPATCH_TOKEN }}
+        if: env.DISPATCH_TOKEN != ''
+        run: printf '%s' "$DISPATCH_TOKEN" | $WRANGLER secret put GITHUB_DISPATCH_TOKEN
 
   prices:
     if: vars.CLOUDFLARE_ACCOUNT_ID != '' && (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.job != 'site'))
     runs-on: ubuntu-latest
     timeout-minutes: 45
-    concurrency: cloudflare-prices
+    # A publish waits for a running check instead of being dropped.
+    concurrency:
+      group: cloudflare-prices
+      cancel-in-progress: false
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -73,10 +87,12 @@ jobs:
           $WRANGLER kv key get settings.json --namespace-id "$KV_NAMESPACE_ID" --remote > .data/baseline-settings.json || rm -f .data/baseline-settings.json
           node -e 'JSON.parse(require("fs").readFileSync(".data/baseline-settings.json","utf8"))' 2>/dev/null || rm -f .data/baseline-settings.json
       - name: Check prices
+        if: github.event_name == 'schedule' || inputs.job != 'publish'
         run: node scripts/check-prices.mjs
         env:
           BASELINE_SETTINGS_FILE: .data/baseline-settings.json
           BASELINE_URL: http://127.0.0.1:9
+          BASELINE_FORCE_MODEL_AUDIT: ${{ inputs.force_model_audit && '1' || '' }}
           APIFY_TOKEN: ${{ secrets.APIFY_TOKEN }}
           BROWSERLESS_TOKEN: ${{ secrets.BROWSERLESS_TOKEN }}
           MARKETPLACE_BROWSER_URL: ${{ secrets.MARKETPLACE_BROWSER_URL }}
@@ -88,8 +104,11 @@ jobs:
         run: |
           $WRANGLER d1 execute baseline --remote --file out/offers.sql
           $WRANGLER kv key put dashboard.json --path out/dashboard.json --namespace-id "$KV_NAMESPACE_ID" --remote
+          $WRANGLER kv key put dashboard-admin.json --path out/dashboard-admin.json --namespace-id "$KV_NAMESPACE_ID" --remote
+          $WRANGLER kv key put operations.json --path out/operations.json --namespace-id "$KV_NAMESPACE_ID" --remote
           $WRANGLER kv key put monitor-state.json --path .data/baseline-monitor.json --namespace-id "$KV_NAMESPACE_ID" --remote
       - name: Send price alerts
+        if: github.event_name == 'schedule' || inputs.job != 'publish'
         env:
           BASELINE_VAPID_KEYS: ${{ secrets.BASELINE_VAPID_KEYS }}
         run: |
