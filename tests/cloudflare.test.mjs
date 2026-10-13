@@ -77,3 +77,48 @@ test("the Cloudflare workflow stays off until the account is configured", async 
   assert.equal((workflow.match(/if: vars\.CLOUDFLARE_ACCOUNT_ID != ''/g) ?? []).length, 2);
   assert.match(workflow, /cron: "17 \*\/3 \* \* \*"/);
 });
+
+test("admin settings changes are checked and applied to the saved settings", async () => {
+  const { applySettingsChange } = await import("../scripts/settings-change.mjs");
+  const saved = { gripSize: "L3", targets: { "blade-v9": 275 }, modelOrder: ["blade-v10", "blade-v9", "blade-v8", "ezone-98", "pure-aero-98", "speed-pro-2026"], brandPicks: {}, retailers: [{ key: "atr-sports", name: "ATR Sports", enabled: true }] };
+  assert.equal(applySettingsChange(saved, { gripSize: "L2" }).settings.gripSize, "L2");
+  assert.match(applySettingsChange(saved, { gripSize: "XL" }).error, /grip size/);
+  assert.equal(applySettingsChange(saved, { modelKey: "blade-v9", targetPrice: 240 }).settings.targets["blade-v9"], 240);
+  assert.equal(applySettingsChange(saved, { modelKey: "blade-v9", targetPrice: 150, market: "used" }).settings.usedTargets["blade-v9"], 150);
+  assert.match(applySettingsChange(saved, { modelKey: "toString", targetPrice: 10 }).error, /tracked racquet/);
+  assert.equal(applySettingsChange(saved, { retailerKey: "atr-sports", enabled: false }).settings.retailers[0].enabled, false);
+  assert.equal(applySettingsChange(saved, { slot: 2, selectedModelKey: "ezone-100" }).settings.modelOrder[2], "ezone-100");
+  assert.match(applySettingsChange(saved, { slot: 2, selectedModelKey: "blade-v10" }).error, /already on the watchlist/);
+  assert.match(applySettingsChange(saved, { featuredBrand: "Wilson", featuredSlot: 0, selectedModelKey: "ezone-98" }).error, /from that brand/);
+  assert.equal(saved.gripSize, "L3", "the saved settings are not modified");
+});
+
+test("only a correctly signed Cloudflare Access token for this application is admin", async () => {
+  const { isAccessAdmin } = await import("../cloudflare/access.js");
+  const keys = await crypto.subtle.generateKey({ name: "RSASSA-PKCS1-v1_5", modulusLength: 2048, publicExponent: new Uint8Array([1, 0, 1]), hash: "SHA-256" }, true, ["sign", "verify"]);
+  const jwk = { ...(await crypto.subtle.exportKey("jwk", keys.publicKey)), kid: "k1" };
+  const encode = (value) => Buffer.from(JSON.stringify(value)).toString("base64url");
+  const team = "test-team.cloudflareaccess.com";
+  const sign = async (claims, kid = "k1") => {
+    const body = `${encode({ alg: "RS256", kid })}.${encode(claims)}`;
+    const signature = await crypto.subtle.sign("RSASSA-PKCS1-v1_5", keys.privateKey, new TextEncoder().encode(body));
+    return `${body}.${Buffer.from(signature).toString("base64url")}`;
+  };
+  const fetcher = async () => new Response(JSON.stringify({ keys: [jwk] }));
+  const now = Date.now();
+  const claims = { aud: ["aud-1"], iss: `https://${team}`, exp: Math.floor(now / 1000) + 600 };
+  const check = async (token, audience = "aud-1") => isAccessAdmin(new Request("https://baseline.besada.net/api/tracker", { headers: token ? { "cf-access-jwt-assertion": token } : {} }), { teamDomain: team, audience, fetcher, now });
+  assert.equal(await check(await sign(claims)), true);
+  assert.equal(await check(await sign(claims), "other-app"), false);
+  assert.equal(await check(await sign({ ...claims, exp: Math.floor(now / 1000) - 3600 })), false);
+  assert.equal(await check(await sign({ ...claims, iss: "https://evil.cloudflareaccess.com" })), false);
+  const [header, payload] = (await sign(claims)).split(".");
+  assert.equal(await check(`${header}.${payload}.AAAA`), false);
+  assert.equal(await check(null), false);
+});
+
+test("the public hostname never gets admin answers, even with an Access header", async () => {
+  const db = fakeDb();
+  const request = new Request("https://baseline-beta.besada.net/api/tracker", { method: "PATCH", headers: { "cf-access-jwt-assertion": "x.y.z" }, body: "{\"gripSize\":\"L2\"}" });
+  assert.equal((await worker.fetch(request, env(db, { ADMIN_HOST: "baseline.besada.net", ACCESS_TEAM_DOMAIN: "t.cloudflareaccess.com", ACCESS_AUD: "a" }), ctx)).status, 403);
+});

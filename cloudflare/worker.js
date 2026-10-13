@@ -8,9 +8,19 @@
 //   GET  /go/<offer id>    redirects to the stored retailer URL and logs the click
 //   /api/push/*            price-alert sign-ups (sent by the GitHub price check)
 //
+// On the admin hostname (ADMIN_HOST, behind Cloudflare Access) a request with
+// a valid Access token is admin: it gets the admin dashboard, may change the
+// saved settings (KV "settings.json"), start a price check, and read the
+// Analytics report. Changes are published by the GitHub workflow, which this
+// Worker starts with GITHUB_DISPATCH_TOKEN (Actions: read and write, this
+// repository only).
+//
 // Bindings (cloudflare/wrangler.jsonc): ASSETS, DATA (KV), DB (D1), PUSH_PUBLIC_KEY.
 
-import { acceptEvent } from "../scripts/analytics.mjs";
+import { acceptEvent, reportDays, summarizeAnalytics } from "../scripts/analytics.mjs";
+import { weeklyRetailerClicks } from "../scripts/click-report.mjs";
+import { applySettingsChange } from "../scripts/settings-change.mjs";
+import { isAccessAdmin } from "./access.js";
 import { looksAutomated, notFoundPage, offerIdFromPath } from "../scripts/outbound-rules.mjs";
 import { validSubscription } from "../scripts/push-subscription.mjs";
 
@@ -33,6 +43,68 @@ async function readSmallJson(request, limit = 8192) {
   } catch {
     return null;
   }
+}
+
+// Starts the GitHub workflow: "publish" rebuilds the dashboard from the last
+// price check with the current settings; "prices" runs a new price check.
+async function startWorkflow(env, job, extraInputs = {}) {
+  if (!env.GITHUB_DISPATCH_TOKEN) return false;
+  const response = await fetch(`https://api.github.com/repos/${env.GITHUB_REPO}/actions/workflows/cloudflare.yml/dispatches`, {
+    method: "POST",
+    headers: { authorization: `Bearer ${env.GITHUB_DISPATCH_TOKEN}`, accept: "application/vnd.github+json", "user-agent": "baseline-worker", "content-type": "application/json" },
+    body: JSON.stringify({ ref: "main", inputs: { job, ...extraInputs } }),
+  });
+  return response.status === 204;
+}
+
+async function handleAdminTracker(request, env) {
+  const url = new URL(request.url);
+  if (request.method === "GET" || request.method === "HEAD") {
+    const dashboard = await env.DATA.get("dashboard-admin.json", { type: "stream" }) ?? await env.DATA.get("dashboard.json", { type: "stream" });
+    if (!dashboard) return json(503, { error: "Prices are not available yet." });
+    return new Response(dashboard, { headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" } });
+  }
+  if (request.method === "PATCH") {
+    const change = await readSmallJson(request);
+    const saved = await env.DATA.get("settings.json", { type: "json" });
+    const result = applySettingsChange(saved, change);
+    if (result.error) return json(400, { error: result.error });
+    await env.DATA.put("settings.json", JSON.stringify(result.settings));
+    const started = await startWorkflow(env, "publish");
+    return json(200, { ok: true, queued: started, message: started ? "Saved. The site updates in about 2–3 minutes." : "Saved. It will show after the next price check." });
+  }
+  if (request.method === "POST") {
+    const action = url.searchParams.get("action");
+    if (action === "check" || action === "models") {
+      const started = await startWorkflow(env, "prices", action === "models" ? { force_model_audit: "true" } : {});
+      return json(started ? 202 : 503, started
+        ? { ok: true, queued: true, message: action === "models" ? "Catalogue scan started. Results appear in about 5 minutes." : "Price check started. Results appear in about 3 minutes." }
+        : { error: "The price check could not be started." });
+    }
+    // Refreshing one model's specs runs with the next full check on Cloudflare.
+    if (action === "model") return json(202, { ok: true, queued: false });
+  }
+  return json(405, { error: "Not supported." });
+}
+
+// The admin Analytics report, from D1 counts and clicks.
+async function handleAdminAnalytics(request, env) {
+  const days = reportDays(new URL(request.url).searchParams.get("days"));
+  const since = new Date(Date.now() - 2 * days * 24 * 60 * 60 * 1000);
+  const [{ results: rows = [] }, { results: clicks = [] }, operations] = await Promise.all([
+    env.DB.prepare("SELECT day, event, detail, count FROM analytics WHERE day >= ?1").bind(since.toISOString().slice(0, 10)).all(),
+    env.DB.prepare("SELECT ts, retailer, network, kind, model FROM clicks WHERE ts >= ?1").bind(new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString()).all(),
+    env.DATA.get("operations.json", { type: "json" }),
+  ]);
+  const analytics = { version: 2, startedAt: rows.reduce((first, row) => (row.day < first ? row.day : first), new Date().toISOString().slice(0, 10)), days: {} };
+  for (const row of rows) {
+    const bucket = analytics.days[row.day] ??= { events: {}, details: {} };
+    if (!row.detail) bucket.events[row.event] = row.count;
+    else if (row.event === "browse_section") bucket.details[row.detail] = row.count;
+    else ((bucket.breakdown ??= {})[row.event] ??= {})[row.detail] = row.count;
+  }
+  const report = summarizeAnalytics(analytics, { clicks, dashboard: operations ?? {}, days });
+  return json(200, { ...report, retailerWeeks: weeklyRetailerClicks(clicks) });
 }
 
 async function handleTracker(request, env) {
@@ -129,10 +201,14 @@ async function handlePush(request, env) {
 
 const worker = {
   async fetch(request, env, ctx) {
-    const { pathname } = new URL(request.url);
+    const url = new URL(request.url);
+    const { pathname } = url;
     try {
-      if (pathname === "/api/tracker") return await handleTracker(request, env);
-      if (pathname === "/api/analytics") return await handleAnalytics(request, env);
+      // Admin only on the Access-protected hostname, with a valid Access token.
+      const admin = url.hostname === env.ADMIN_HOST && (pathname === "/api/tracker" || pathname === "/api/analytics")
+        && await isAccessAdmin(request, { teamDomain: env.ACCESS_TEAM_DOMAIN, audience: env.ACCESS_AUD });
+      if (pathname === "/api/tracker") return await (admin ? handleAdminTracker(request, env) : handleTracker(request, env));
+      if (pathname === "/api/analytics") return await (admin && !url.searchParams.has("event") ? handleAdminAnalytics(request, env) : handleAnalytics(request, env));
       if (pathname.startsWith("/go/")) return await handleOutbound(request, env, ctx);
       if (pathname.startsWith("/api/push/")) return await handlePush(request, env);
       if (pathname.startsWith("/api/")) return json(404, { error: "Not found" });

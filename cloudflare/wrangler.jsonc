@@ -12,7 +12,14 @@
   },
   "kv_namespaces": [{ "binding": "DATA", "id": "0f0620ab764b40c9954553d68876617d" }],
   "d1_databases": [{ "binding": "DB", "database_name": "baseline", "database_id": "603e177d-31ea-4f5e-93c9-8d92b48fa9f5" }],
-  "vars": { "MARKET": "CA" },
+  "vars": {
+    "MARKET": "CA",
+    // The Access-protected admin hostname and its Access application.
+    "ADMIN_HOST": "baseline.besada.net",
+    "ACCESS_TEAM_DOMAIN": "lively-credit-1a2e.cloudflareaccess.com",
+    "ACCESS_AUD": "f9e0a71b302291da27aeae2bebf05f77559d446f5a7b034bac0cc5f324c0cfbe",
+    "GITHUB_REPO": "dbesada/baseline-racquet-tracker"
+  },
   "workers_dev": true,
   "observability": { "enabled": true }
 }

@@ -6,6 +6,8 @@ import { bestPrices } from "./price-alerts.mjs";
 
 // After a price check on GitHub, writes what Cloudflare serves:
 //   out/dashboard.json  the public dashboard (KV key "dashboard.json")
+//   out/dashboard-admin.json  the same for the admin site (publicPreview false)
+//   out/operations.json tracker health for the admin Analytics report
 //   out/offers.sql      every listing /go/ can open, with the affiliate link
 //                       applied, plus each racquet's lowest price (D1)
 // The workflow uploads them with Wrangler.
@@ -55,5 +57,7 @@ statements.push(`DELETE FROM analytics WHERE day < '${new Date(seenAt - 90 * 24 
 
 await mkdir(outDir, { recursive: true });
 await writeFile(`${outDir}/dashboard.json`, JSON.stringify(dashboard));
+await writeFile(`${outDir}/dashboard-admin.json`, JSON.stringify({ ...dashboard, publicPreview: false }));
+await writeFile(`${outDir}/operations.json`, JSON.stringify({ sourceHealth: dashboard.sourceHealth, dropsLast24Hours: dashboard.dropsLast24Hours, lastCheck: dashboard.lastCheck }));
 await writeFile(`${outDir}/offers.sql`, `${statements.join("\n")}\n`);
 console.log(`Dashboard: ${dashboard.offers.length} racquet listings, ${dashboard.saleOffers.length} on sale. Links: ${rows.length}. Racquet prices: ${prices.length}.`);

@@ -1,5 +1,3 @@
-import { readFile } from "node:fs/promises";
-
 // Clicks per retailer per week, from the /go/ click log, for the admin
 // Analytics panel. Weeks run Monday to Sunday in Toronto time and are listed
 // newest first. Nothing is stored: the log is read when the report is asked for.
@@ -54,6 +52,8 @@ export function weeklyRetailerClicks(rows, { weeks = 8, top = 15, timeZone = "Am
 // A missing log means no clicks yet; unreadable lines are skipped.
 export async function readClickRows(path) {
   let text;
+  // Imported here so the Cloudflare Worker can use the report without Node.
+  const { readFile } = await import("node:fs/promises");
   try { text = await readFile(path, "utf8"); } catch { return []; }
   return text.split("\n").flatMap((line) => {
     try { return line ? [JSON.parse(line)] : []; } catch { return []; }
