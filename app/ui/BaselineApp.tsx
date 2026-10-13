@@ -24,6 +24,7 @@ import { AnalyticsPanel } from "./AnalyticsPanel";
 import { BallMarket, useBallMarket } from "./BallMarket";
 import { catalogueMetrics as computeCatalogueMetrics, coachModels as computeCoachModels, marketplaceHealth as computeMarketplaceHealth, opportunityChoices as computeOpportunityChoices, resolveRacquetSpecs } from "./dashboard-insights";
 import { RacquetGuide, StringGuide } from "./EquipmentGuides";
+import { RacquetSearch } from "./RacquetSearch";
 import { RacquetBrowser, useRacquetCatalogue, type RacquetCardContext } from "./RacquetBrowser";
 import { CompareTray, ComparisonDialog, ImagePreviewDialog, RetailerDialog, type RacquetDialogTab } from "./RacquetDialogs";
 import { RetailHero, SourceHealth } from "./RetailHero";
@@ -581,6 +582,7 @@ export function BaselineApp() {
         onShowRetailers={showRetailers}
         onOpenRacquet={openRacquet}
         showStartHere={showStartHere}
+        search={<RacquetSearch data={data} specs={resolvedRacquetSpecs} onOpenRacquet={openRacquet} />}
         onStartCoach={openCoach}
         onBrowseRacquets={browseRacquets}
         onHideStartHere={hideStartHere}

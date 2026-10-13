@@ -1321,9 +1321,8 @@ select:disabled { color: #596760; opacity: .72; }
 .term-help { width: 20px; height: 20px; display: inline-grid; place-items: center; vertical-align: middle; border: 1px solid var(--line); border-radius: 50%; color: var(--muted); font-size: .66rem; font-weight: 900; line-height: 1; text-decoration: none; }
 .term-help:hover, .term-help:focus-visible { color: var(--ink); border-color: var(--ink); }
 .top-actions > .term-help { width: 28px; height: 28px; font-size: .78rem; }
-.term-tip-card { width: min(360px, calc(100vw - 32px)); margin: auto; padding: 18px 18px 14px; border: 1px solid var(--line); border-radius: 18px; background: var(--paper); color: var(--ink); box-shadow: 0 24px 70px rgba(4,15,11,.35); font-size: .86rem; font-weight: 500; line-height: 1.5; letter-spacing: normal; text-align: left; text-transform: none; white-space: normal; }
-.term-tip-card:popover-open { display: grid; gap: 9px; }
-.term-tip-card::backdrop { background: rgba(7,20,15,.35); }
+.term-tip-layer { position: fixed; z-index: 90; inset: 0; display: grid; place-items: center; padding: 16px; background: rgba(7,20,15,.35); }
+.term-tip-card { display: grid; gap: 9px; width: min(360px, 100%); padding: 18px 18px 14px; border: 1px solid var(--line); border-radius: 18px; background: var(--paper); color: var(--ink); box-shadow: 0 24px 70px rgba(4,15,11,.35); font-size: .86rem; font-weight: 500; line-height: 1.5; letter-spacing: normal; text-align: left; text-transform: none; white-space: normal; }
 .term-tip-card strong { font-size: .98rem; font-weight: 850; }
 .term-tip-card > span { color: var(--muted); }
 .term-tip-card button { justify-self: end; margin-top: 2px; border: 0; border-radius: 999px; padding: 8px 16px; background: var(--ink); color: var(--paper); font: inherit; font-size: .76rem; font-weight: 800; cursor: pointer; }
@@ -1419,4 +1418,35 @@ select:disabled { color: #596760; opacity: .72; }
   .analytics-kpis small.up { color: #8ee3b5; }
   .analytics-kpis small.down { color: #f0a58f; }
   .analytics-bars li i { background: color-mix(in srgb, #8ee3b5 55%, transparent); }
+}
+
+/* Racquet search in the hero: type a name, pick a result, see its specs and prices. */
+.racquet-search { position: relative; z-index: 6; max-width: 34rem; margin: 0 0 22px; }
+.racquet-search-field { display: flex; align-items: center; gap: 10px; min-height: 52px; padding: 0 16px; border: 1px solid var(--line); border-radius: 999px; background: white; box-shadow: 0 8px 22px rgba(16,37,29,.08); cursor: text; }
+.racquet-search-field:focus-within { border-color: var(--ink); }
+.racquet-search-field > span { color: var(--muted); font-size: 1.1rem; }
+.racquet-search-field input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; color: var(--ink); font: inherit; font-size: .92rem; }
+.racquet-search-field input::-webkit-search-cancel-button { cursor: pointer; }
+.racquet-search-results { position: absolute; top: calc(100% + 6px); left: 0; right: 0; max-height: min(420px, 60vh); overflow: auto; margin: 0; padding: 6px; list-style: none; border: 1px solid var(--line); border-radius: 18px; background: var(--paper); box-shadow: 0 24px 60px rgba(4,15,11,.25); }
+.racquet-search-results button { width: 100%; display: grid; grid-template-columns: 36px minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 8px 10px; border: 0; border-radius: 12px; background: transparent; color: var(--ink); font: inherit; text-align: left; cursor: pointer; }
+.racquet-search-results button.active { background: color-mix(in srgb, var(--lime) 30%, transparent); }
+.racquet-search-photo { width: 36px; height: 48px; display: grid; place-items: center; overflow: hidden; border-radius: 7px; background: white; }
+.racquet-search-photo img { width: 100%; height: 100%; object-fit: contain; }
+.racquet-search-name { min-width: 0; display: grid; gap: 2px; }
+.racquet-search-name strong { display: -webkit-box; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 2; font-size: .86rem; line-height: 1.25; }
+.racquet-search-name small, .racquet-search-price small { color: var(--muted); font-size: .68rem; font-weight: 600; }
+.racquet-search-price { font-size: .86rem; font-weight: 850; white-space: nowrap; }
+.racquet-search-empty { padding: 12px; color: var(--muted); font-size: .8rem; }
+
+@media (prefers-color-scheme: dark) {
+  .racquet-search-field { background: #172329; border-color: rgba(245,247,248,.24); }
+  .racquet-search-results { background: #172329; }
+  .racquet-search-photo { background: #f5f7f8; }
+  .racquet-search-results button.active { background: rgba(245,247,248,.1); }
+}
+
+@media (max-width: 620px) {
+  .racquet-search { margin-bottom: 18px; }
+  .racquet-search-field { min-height: 48px; }
+  .racquet-search-field input { font-size: 1rem; }
 }
