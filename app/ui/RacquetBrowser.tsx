@@ -243,7 +243,7 @@ function ModelCard({ modelKey, index, featured, cards }: { modelKey: string; ind
             <label><span>$</span><input autoFocus inputMode="decimal" value={targetEditor.draft} onChange={(event) => targetEditor.setDraft(event.target.value)} aria-label="Target price in Canadian dollars" /></label>
             <button type="submit">Save</button>
           </form>
-        ) : <button className="target-button" onClick={() => targetEditor.start(modelKey, target)}>{money.format(target)} <span>edit</span></button>}
+        ) : <span className="target-actions"><button className="target-button" onClick={() => targetEditor.start(modelKey, target)}>{money.format(target)} <span>edit</span></button><button className="target-alert" onClick={() => cards.onOpenRacquet(modelKey)} aria-label={`Set a price alert for ${data?.modelNames[modelKey] ?? modelKey}`} title="Price alert">🔔</button></span>}
       </div>
       <div className="offers">
         {loading ? <div className="loading-line" /> : available.length ? available.slice(0, 3).map((offer, offerIndex) => {

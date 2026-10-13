@@ -139,7 +139,7 @@ export function AnalyticsPanel({ analytics, loading, days, onDaysChange, onClose
           <section className="analytics-section"><div><span className="settings-label">PICKED FROM SEARCH</span><CountList rows={beginner.searchPicks.map((row) => ({ label: row.name, count: row.count }))} empty="No racquets picked from search yet." /></div></section>
 
           <section className="analytics-section analytics-split">
-            <div><span className="settings-label">ENGAGEMENT</span><ol><li><span>Store comparisons opened</span><b>{totals.retailerOpens}</b></li><li><span>Side-by-side comparisons</span><b>{totals.comparisons}</b></li><li><span>Used market visits</span><b>{totals.usedMarket}</b></li><li><span>Page views (incl. reloads)</span><b>{totals.pageViews}</b></li></ol></div>
+            <div><span className="settings-label">ENGAGEMENT</span><ol><li><span>Store comparisons opened</span><b>{totals.retailerOpens}</b></li><li><span>Side-by-side comparisons</span><b>{totals.comparisons}</b></li><li><span>Used market visits</span><b>{totals.usedMarket}</b></li><li><span>Price alerts set (target / any drop)</span><b>{beginner.alertsSet.find((row) => row.mode === "target")?.count ?? 0} / {beginner.alertsSet.find((row) => row.mode === "drop")?.count ?? 0}</b></li><li><span>Page views (incl. reloads)</span><b>{totals.pageViews}</b></li></ol></div>
             <div><span className="settings-label">TRACKER HEALTH</span><ol><li><span>Fresh listings</span><b>{analytics.operations.freshOffers}</b></li><li><span>Retailer sources live</span><b>{analytics.operations.liveSources}/{analytics.operations.totalSources}</b></li><li><span>Price drops, 24h</span><b>{analytics.operations.dropsLast24Hours}</b></li></ol></div>
           </section>
 

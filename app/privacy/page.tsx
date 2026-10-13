@@ -7,7 +7,7 @@ export default function PrivacyPage() {
       <article>
         <p className="eyebrow">PRIVACY</p>
         <h1>Privacy at Baseline.</h1>
-        <p className="legal-updated">Effective October 7, 2026</p>
+        <p className="legal-updated">Effective October 13, 2026</p>
 
         <h2>What Baseline stores</h2>
         <p>Baseline’s public beta does not require an account. Your grip preference, six-frame watchlist, target prices, completed Baseline Coach fit, and browser-notification preference are stored locally on your device. The protected Baseline admin service stores its own operational retailer settings and scheduled-monitoring preferences separately.</p>
@@ -26,6 +26,7 @@ export default function PrivacyPage() {
 
         <h2>Changes</h2>
         <p>Baseline’s public beta records privacy-light, aggregate product analytics: page views, visits (one per browser tab session), the name of the site a visit came from (for example google.com, never the full address), section browsing, comparison opens, Baseline Coach opens and completions, which explanations and sale filters are used, and retailer-link clicks. These counts do not include accounts, names, IP addresses, device identifiers, precise location, or individual browsing histories. Aggregate analytics are stored on Baseline’s own service for up to 90 days and are used only to improve the beta. This page will be updated before Baseline adds accounts, payments, advertising, native push notifications, or other personal-data handling.</p>
+        <p>If you turn on a price alert, your browser gives Baseline a notification address (issued by your browser’s maker, such as Google, Mozilla, Apple or Microsoft) and encryption keys for it. Baseline stores these with the racquets you chose, the kind of alert and your target price, and uses them only to send you price alerts. No name, email address, IP address or device details are stored. Turning an alert off deletes it, and the address is deleted when your browser reports that it no longer exists. You can also block notifications for this site in your browser at any time.</p>
       </article>
       <Link className="legal-back" href="/">← Back to Baseline</Link>
     </main>
