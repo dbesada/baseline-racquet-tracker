@@ -233,8 +233,9 @@ export function classify(title) {
   if (/radical pro 2025\b/.test(value)) return "radical-pro-2025";
   if (/radical mp 2025\b/.test(value)) return "radical-mp-2025";
   if (/speed pro (?:2026|legend 2025)\b/.test(value)) return "speed-pro-2026";
-  if (/extreme pro (?:2026|2024)\b/.test(value)) return "extreme-pro-2026";
-  if (/extreme mp (?:2026|2024)\b/.test(value)) return "extreme-mp-2026";
+  // 2024 frames are a different generation, so they are not priced as the 2026 model.
+  if (/extreme pro 2026\b/.test(value)) return "extreme-pro-2026";
+  if (/extreme mp 2026\b/.test(value)) return "extreme-mp-2026";
   if (/extreme tour 2022\b/.test(value)) return "extreme-tour-2022";
   if (/boom pro 2022\b/.test(value)) return "boom-pro-2022";
   if (/boom mp 2022\b/.test(value)) return "boom-mp-2022";
