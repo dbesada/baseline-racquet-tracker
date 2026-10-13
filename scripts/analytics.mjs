@@ -21,6 +21,7 @@ const detailRules = {
   coach_complete: (detail) => (["racquets", "strings", "complete"].includes(detail) ? detail : null),
   start_here: (detail) => (["coach", "browse", "hide"].includes(detail) ? detail : null),
   term_tip: (detail) => (/^[a-z-]{2,24}$/.test(detail) ? detail : null),
+  search_pick: (detail) => (/^[a-z0-9-]{1,80}$/.test(detail) ? detail : null),
   sale_filter: (detail) => (["all", "unstrung", "prestrung"].includes(detail) ? detail : null),
 };
 
@@ -140,6 +141,7 @@ export function summarizeAnalytics(analytics, { clicks = [], dashboard = {}, day
       coachCompletes: ranked(breakdown.coach_complete ?? {}, 3).map(({ key, count }) => ({ focus: key, count })),
       terms: ranked(breakdown.term_tip ?? {}, 10).map(({ key, count }) => ({ term: key, count })),
       saleFilters: ranked(breakdown.sale_filter ?? {}, 3).map(({ key, count }) => ({ filter: key, count })),
+      searchPicks: ranked(breakdown.search_pick ?? {}, 10).map(({ key, count }) => ({ modelKey: key, name: modelNames[key] ?? key, count })),
     },
     operations: {
       freshOffers: dashboard.sourceHealth?.freshOffers ?? 0,

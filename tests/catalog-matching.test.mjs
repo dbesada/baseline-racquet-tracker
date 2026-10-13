@@ -39,3 +39,11 @@ test("retailer page helpers read prices and structured offers", () => {
   assert.equal(jsonLdOffer(product).price, 2);
   assert.deepEqual(productJsonLd('<script type="application/ld+json">{"itemListElement":[null]}</script>'), []);
 });
+
+test("an older model year is not priced as the current model", () => {
+  for (const title of ["Head Extreme Pro 2026 Tennis Racquet", "HEAD EXTREME PRO 2026 TENNIS RACKET", "Head Extreme PRO 2026"]) assert.equal(classify(title), "extreme-pro-2026", title);
+  assert.equal(classify("Head Extreme MP 2026"), "extreme-mp-2026");
+  for (const title of ["Head Extreme Pro 2024 Tennis Racquet", "Head Extreme Pro (2024)", "Head Extreme Pro 2024 Unstrung (231104)", "Head Extreme MP 2024"]) {
+    assert.ok(!/2026/.test(classify(title) ?? ""), title);
+  }
+});

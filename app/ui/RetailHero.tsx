@@ -7,7 +7,7 @@ import { money, outboundHref, outboundRel, relativeTime } from "./baseline-catal
 import type { Opportunity } from "./dashboard-insights";
 import { PatternBadge, RacquetName } from "./racquet-visuals";
 
-export function RetailHero({ data, loading, checking, error, opportunities, opportunityMode, specs, showStartHere, onCheckNow, onOpportunityModeChange, onShowRetailers, onOpenRacquet, onStartCoach, onBrowseRacquets, onHideStartHere }: {
+export function RetailHero({ data, loading, checking, error, opportunities, opportunityMode, specs, showStartHere, search, onCheckNow, onOpportunityModeChange, onShowRetailers, onOpenRacquet, onStartCoach, onBrowseRacquets, onHideStartHere }: {
   data: Dashboard | null;
   loading: boolean;
   checking: boolean;
@@ -20,6 +20,8 @@ export function RetailHero({ data, loading, checking, error, opportunities, oppo
   onShowRetailers: (modelKey: string) => void;
   onOpenRacquet: (modelKey: string) => void;
   showStartHere: boolean;
+  /** The racquet search box, shown under the intro. */
+  search: React.ReactNode;
   onStartCoach: () => void;
   onBrowseRacquets: () => void;
   onHideStartHere: () => void;
@@ -31,6 +33,7 @@ export function RetailHero({ data, loading, checking, error, opportunities, oppo
         <p className="eyebrow">CANADIAN RACQUET PRICE TRACKER</p>
         <h1>Wait for the<br /><em>right bounce.</em></h1>
         <p className="lede">Baseline compares tennis racquet prices across Canadian stores every 3 hours, so you can see who has the lowest price before you buy.</p>
+        {search}
         <div className="hero-actions">
           {!data || data.publicPreview ? <span className="public-refresh-note">Prices refresh automatically<br /><strong>Every 3 hours</strong></span> : <button className="check-button" onClick={onCheckNow} disabled={checking}>
             <span className={checking ? "spin" : ""} aria-hidden="true">↻</span>
