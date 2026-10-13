@@ -47,3 +47,12 @@ test("an older model year is not priced as the current model", () => {
     assert.ok(!/2026/.test(classify(title) ?? ""), title);
   }
 });
+
+test("a listing that names another model year is not matched to the current model", () => {
+  for (const [title, key] of [["Head Speed MP 2026", "speed-mp"], ["Head Boom Pro 2026 Tennis Racquet", "boom-pro"], ["Yonex VCORE 98L (2026)", "vcore-98l"], ["Head Boom MP", "boom-mp"], ["Babolat Pure Drive Wimbledon 2026", "pure-drive-100"]]) {
+    assert.equal(classify(title), key, title);
+  }
+  for (const title of ["Head Speed MP Legend 2025 Tennis Racquet", "Head Speed Pro Legend (2025)", "Head Boom MP (2024)", "HEAD BOOM PRO 2024 TENNIS RACKET", "Yonex VCORE 100L (2023)", "Yonex VCORE 98L (2023)", "Dunlop FX 500 Lite - 2023"]) {
+    assert.equal(classify(title), null, title);
+  }
+});

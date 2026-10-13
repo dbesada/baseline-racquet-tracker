@@ -144,7 +144,7 @@ export function AnalyticsPanel({ analytics, loading, days, onDaysChange, onClose
           </section>
 
           {analytics.retailerWeeks && <RetailerWeeksTable report={analytics.retailerWeeks} />}
-          <p className="analytics-note">Analytics began {new Date(analytics.startedAt).toLocaleDateString("en-CA", { month: "short", day: "numeric", year: "numeric" })}. A visit is one browser tab session; counts are totals, not unique people. Buy clicks come from the /go/ click log, so they include every buy button on the site.</p>
+          <p className="analytics-note">Analytics began {new Date(analytics.startedAt).toLocaleDateString("en-CA", { month: "short", day: "numeric", year: "numeric" })}. A visit is one browser tab session; counts are totals, not unique people. Buy clicks come from the /go/ click log, so they include every buy button on the site; from Oct 13, 2026 they count public visitors only (not the admin site or crawlers).</p>
         </> : <p className="analytics-loading">No analytics snapshot is available yet.</p>}
       </section>
     </div>

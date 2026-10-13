@@ -6,6 +6,8 @@
 // and production never ran the API's, so both were removed. Change matching
 // rules here only.
 
+import { modelNames } from "./racquet-catalogue.js";
+
 const manufacturerModelCodes = new Map([
   ["WR207811", "blade-v10"], ["WR207911", "blade-98-18x20-v10"],
   ["WR149811", "blade-v9"], ["WR149911", "blade-98-18x20-v9"],
@@ -26,9 +28,39 @@ export function hasStringPattern(evidence, mains, crosses) {
   return new RegExp(`(?:^|[^0-9])${mains}\\s*(?:x|×|/|by)\\s*${crosses}(?:$|[^0-9])`, "i").test(String(evidence));
 }
 
+// A listing that names a year other than the model's own (a 2024 frame under a
+// 2026 model) is a different generation, so it is left unmatched instead of
+// being priced as the current model. A listing without a year still matches.
+// Models sold under more than one year are listed here.
+const modelYearAliases = {
+  "pure-drive-100": ["2025", "2026"], // the 2026 Wimbledon edition of the 2025 frame
+  "ezone-100": ["2025", "2026"], // the 8th generation, listed by some stores as 2026
+};
+
+function yearsIn(text) {
+  return [...String(text).matchAll(/(?<![0-9])(20[12][0-9])(?![0-9])/g)].map((match) => match[1]);
+}
+
+export function namesOtherYear(title, modelKey) {
+  const modelYears = modelYearAliases[modelKey] ?? yearsIn(`${modelNames[modelKey] ?? ""} ${modelKey}`);
+  const listingYears = yearsIn(title);
+  return modelYears.length > 0 && listingYears.length > 0 && !listingYears.some((year) => modelYears.includes(year));
+}
+
 export function classify(title) {
   const codeMatch = manufacturerModelKey(title);
   if (codeMatch) return codeMatch;
+  const modelKey = classifyByName(title);
+  return modelKey && namesOtherYear(title, modelKey) ? null : modelKey;
+}
+
+// For a whole product page, where a copyright line or a related product can
+// mention another year: the model rules without the year check.
+export function classifyPageText(text) {
+  return manufacturerModelKey(text) ?? classifyByName(text);
+}
+
+function classifyByName(title) {
   const raw = title.toLowerCase();
   const value = title.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
   if (/\b(demo|used|grommet|junior|jr)\b/.test(value)) return null;
@@ -232,7 +264,7 @@ export function classify(title) {
   if (/radical mp 2023\b/.test(value)) return "radical-mp-2023";
   if (/radical pro 2025\b/.test(value)) return "radical-pro-2025";
   if (/radical mp 2025\b/.test(value)) return "radical-mp-2025";
-  if (/speed pro (?:2026|legend 2025)\b/.test(value)) return "speed-pro-2026";
+  if (/speed pro 2026\b/.test(value)) return "speed-pro-2026";
   // 2024 frames are a different generation, so they are not priced as the 2026 model.
   if (/extreme pro 2026\b/.test(value)) return "extreme-pro-2026";
   if (/extreme mp 2026\b/.test(value)) return "extreme-mp-2026";

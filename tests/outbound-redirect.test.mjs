@@ -4,7 +4,7 @@ import { mkdtemp, readdir, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
-import { createOutboundRedirect, marketFrom, offerIdFromPath } from "../scripts/outbound-redirect.mjs";
+import { createOutboundRedirect, looksAutomated, marketFrom, offerIdFromPath } from "../scripts/outbound-redirect.mjs";
 
 // One offer of every kind the monitor writes, with IDs shaped like the real ones.
 const state = {
@@ -170,4 +170,14 @@ test("the relay serves /go/ itself and robots.txt keeps crawlers out of it", asy
   assert.match(relay, /const state = JSON\.parse\(await readFile\(stateFile, "utf8"\)\);[^\n]*\n(?:\s*\/\/[^\n]*\n)?\s*rememberOffers\(state\);/, "offers shown on the dashboard must be remembered");
   assert.ok(relay.indexOf("handleOutbound(req, res)") < relay.lastIndexOf("forward(req, res);"), "/go/ must be handled before requests are forwarded to the UI");
   assert.match(await readFile(new URL("../public/robots.txt", import.meta.url), "utf8"), /^User-agent: \*\r?\nDisallow: \/go\/$/m);
+});
+
+test("crawlers and the admin site still redirect but are not counted as clicks", async () => {
+  for (const agent of ["Googlebot/2.1", "facebookexternalhit/1.1", "curl/8.4", "python-requests/2.31", "HeadlessChrome/120", "", undefined]) assert.equal(looksAutomated(agent), true, String(agent));
+  assert.equal(looksAutomated("Mozilla/5.0 (iPhone; CPU iPhone OS 17_0) AppleWebKit/605.1.15 Mobile/15E148 Safari/604.1"), false);
+  const { call, clicks } = await setup({ countClick: (req) => req.headers["x-test-visitor"] === "yes" });
+  assert.equal((await call(goPath("used:ebay:v1|123|0"))).status, 302);
+  assert.equal((await clicks()).length, 0);
+  await call(goPath("used:ebay:v1|123|0"), { headers: { "x-test-visitor": "yes" } });
+  assert.equal((await clicks()).length, 1);
 });
