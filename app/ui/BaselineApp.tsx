@@ -301,7 +301,10 @@ export function BaselineApp() {
     setError("");
     try {
       let response = await fetch("/api/tracker?action=models", { method: "POST" });
-      if (!response.ok) throw new Error("The model catalogue refresh could not start.");
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({})) as { error?: string };
+        throw new Error(body.error ?? "The model catalogue refresh could not start.");
+      }
       const first = await response.json() as Dashboard & { message?: string };
       if (!Array.isArray(first.offers)) {
         setModelFetchMessage(first.message ?? "Catalogue scan started.");
@@ -341,7 +344,10 @@ export function BaselineApp() {
     setError("");
     try {
       const response = await fetch("/api/tracker?action=check", { method: "POST" });
-      if (!response.ok) throw new Error("Price check failed. Please try again.");
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({})) as { error?: string };
+        throw new Error(body.error ?? "Price check failed. Please try again.");
+      }
       const next = await response.json() as Dashboard & { message?: string };
       if (!Array.isArray(next.offers)) {
         setNotice(next.message ?? "Price check started.");

@@ -20,6 +20,8 @@
     "ACCESS_AUD": "f9e0a71b302291da27aeae2bebf05f77559d446f5a7b034bac0cc5f324c0cfbe",
     "GITHUB_REPO": "dbesada/baseline-racquet-tracker"
   },
+  // Starts the GitHub price check every 3 hours (Cloudflare Cron Trigger, free plan).
+  "triggers": { "crons": ["17 */3 * * *"] },
   "workers_dev": true,
   "observability": { "enabled": true }
 }

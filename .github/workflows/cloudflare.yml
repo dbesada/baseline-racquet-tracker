@@ -13,8 +13,12 @@ name: Cloudflare
 on:
   push:
     branches: [main]
+  # Fallback only: the Cloudflare Worker's Cron Trigger starts the 3-hourly
+  # check. A scheduled run skips the price check and alerts when the last check is under
+  # 2 hours old, but still republishes, so a settings change it replaced in the
+  # queue is not lost.
   schedule:
-    - cron: "17 */3 * * *"
+    - cron: "47 */6 * * *"
   workflow_dispatch:
     inputs:
       job:
@@ -86,8 +90,19 @@ jobs:
           node -e 'JSON.parse(require("fs").readFileSync(".data/baseline-monitor.json","utf8"))' 2>/dev/null || rm -f .data/baseline-monitor.json
           $WRANGLER kv key get settings.json --namespace-id "$KV_NAMESPACE_ID" --remote > .data/baseline-settings.json || rm -f .data/baseline-settings.json
           node -e 'JSON.parse(require("fs").readFileSync(".data/baseline-settings.json","utf8"))' 2>/dev/null || rm -f .data/baseline-settings.json
+      - name: Skip a scheduled run when a recent check exists
+        id: fresh
+        if: github.event_name == 'schedule'
+        run: |
+          node -e '
+            let age = Infinity;
+            try { age = Date.now() - Date.parse(JSON.parse(require("fs").readFileSync(".data/baseline-monitor.json", "utf8")).checkedAt); } catch {}
+            const skip = age < 2 * 60 * 60 * 1000;
+            console.log(skip ? "Last check is recent: skipping the price check, republishing only." : "No recent check; running the fallback check.");
+            require("fs").appendFileSync(process.env.GITHUB_OUTPUT, "skip=" + skip + "\n");
+          '
       - name: Check prices
-        if: github.event_name == 'schedule' || inputs.job != 'publish'
+        if: steps.fresh.outputs.skip != 'true' && (github.event_name == 'schedule' || inputs.job != 'publish')
         run: node scripts/check-prices.mjs
         env:
           BASELINE_SETTINGS_FILE: .data/baseline-settings.json
@@ -108,7 +123,7 @@ jobs:
           $WRANGLER kv key put operations.json --path out/operations.json --namespace-id "$KV_NAMESPACE_ID" --remote
           $WRANGLER kv key put monitor-state.json --path .data/baseline-monitor.json --namespace-id "$KV_NAMESPACE_ID" --remote
       - name: Send price alerts
-        if: github.event_name == 'schedule' || inputs.job != 'publish'
+        if: steps.fresh.outputs.skip != 'true' && (github.event_name == 'schedule' || inputs.job != 'publish')
         env:
           BASELINE_VAPID_KEYS: ${{ secrets.BASELINE_VAPID_KEYS }}
         run: |

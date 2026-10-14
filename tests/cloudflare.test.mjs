@@ -75,7 +75,11 @@ test("analytics accepts known events only, and alert sign-ups are checked", asyn
 test("the Cloudflare workflow stays off until the account is configured", async () => {
   const workflow = await readFile(new URL("../.github/workflows/cloudflare.yml", import.meta.url), "utf8");
   assert.equal((workflow.match(/if: vars\.CLOUDFLARE_ACCOUNT_ID != ''/g) ?? []).length, 2);
-  assert.match(workflow, /cron: "17 \*\/3 \* \* \*"/);
+  // GitHub's schedule is a 6-hourly fallback; Cloudflare's Cron Trigger starts the 3-hourly check.
+  assert.match(workflow, /cron: "47 \*\/6 \* \* \*"/);
+  assert.match(workflow, /steps\.fresh\.outputs\.skip != 'true'/);
+  const wrangler = await readFile(new URL("../cloudflare/wrangler.jsonc", import.meta.url), "utf8");
+  assert.match(wrangler, /"crons": \["17 \*\/3 \* \* \*"\]/);
 });
 
 test("admin settings changes are checked and applied to the saved settings", async () => {
@@ -121,4 +125,25 @@ test("the public hostname never gets admin answers, even with an Access header",
   const db = fakeDb();
   const request = new Request("https://baseline-beta.besada.net/api/tracker", { method: "PATCH", headers: { "cf-access-jwt-assertion": "x.y.z" }, body: "{\"gripSize\":\"L2\"}" });
   assert.equal((await worker.fetch(request, env(db, { ADMIN_HOST: "baseline.besada.net", ACCESS_TEAM_DOMAIN: "t.cloudflareaccess.com", ACCESS_AUD: "a" }), ctx)).status, 403);
+});
+
+test("starting a workflow says why GitHub refused, and the cron trigger starts a price check", async () => {
+  const realFetch = globalThis.fetch;
+  const calls = [];
+  try {
+    globalThis.fetch = async (url, init) => {
+      calls.push({ url: String(url), auth: init.headers.authorization, body: JSON.parse(init.body) });
+      return new Response(JSON.stringify({ message: "Resource not accessible by personal access token" }), { status: 403 });
+    };
+    // The cron trigger: one dispatch of the "prices" job, with a trimmed token.
+    const waits = [];
+    await worker.scheduled({}, { GITHUB_DISPATCH_TOKEN: " ghp_test\n", GITHUB_REPO: "owner/repo" }, { waitUntil: (promise) => waits.push(promise) });
+    await Promise.all(waits);
+    assert.equal(calls.length, 1);
+    assert.equal(calls[0].url, "https://api.github.com/repos/owner/repo/actions/workflows/cloudflare.yml/dispatches");
+    assert.equal(calls[0].auth, "Bearer ghp_test");
+    assert.deepEqual(calls[0].body, { ref: "main", inputs: { job: "prices" } });
+  } finally {
+    globalThis.fetch = realFetch;
+  }
 });
