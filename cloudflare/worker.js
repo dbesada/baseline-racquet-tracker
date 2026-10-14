@@ -47,14 +47,30 @@ async function readSmallJson(request, limit = 8192) {
 
 // Starts the GitHub workflow: "publish" rebuilds the dashboard from the last
 // price check with the current settings; "prices" runs a new price check.
+// Returns { ok } or { ok: false, reason } with GitHub's own explanation, which
+// the admin site shows (never the token).
 async function startWorkflow(env, job, extraInputs = {}) {
-  if (!env.GITHUB_DISPATCH_TOKEN) return false;
-  const response = await fetch(`https://api.github.com/repos/${env.GITHUB_REPO}/actions/workflows/cloudflare.yml/dispatches`, {
-    method: "POST",
-    headers: { authorization: `Bearer ${env.GITHUB_DISPATCH_TOKEN}`, accept: "application/vnd.github+json", "user-agent": "baseline-worker", "content-type": "application/json" },
-    body: JSON.stringify({ ref: "main", inputs: { job, ...extraInputs } }),
-  });
-  return response.status === 204;
+  const token = String(env.GITHUB_DISPATCH_TOKEN ?? "").trim();
+  if (!token) return { ok: false, reason: "the site has no GitHub token (repository secret BASELINE_DISPATCH_TOKEN)" };
+  let response;
+  try {
+    response = await fetch(`https://api.github.com/repos/${env.GITHUB_REPO}/actions/workflows/cloudflare.yml/dispatches`, {
+      method: "POST",
+      headers: { authorization: `Bearer ${token}`, accept: "application/vnd.github+json", "x-github-api-version": "2022-11-28", "user-agent": "baseline-worker", "content-type": "application/json" },
+      body: JSON.stringify({ ref: "main", inputs: { job, ...extraInputs } }),
+    });
+  } catch (error) {
+    const reason = `GitHub could not be reached (${error?.message ?? "network error"})`;
+    console.error(`Workflow "${job}" not started: ${reason}`);
+    return { ok: false, reason };
+  }
+  if (response.status === 204) return { ok: true };
+  const text = await response.text().catch(() => "");
+  let detail = text;
+  try { detail = JSON.parse(text).message ?? text; } catch { /* plain text */ }
+  const reason = `GitHub answered HTTP ${response.status}${detail ? `: ${String(detail).slice(0, 200)}` : ""}`;
+  console.error(`Workflow "${job}" not started: ${reason}`);
+  return { ok: false, reason };
 }
 
 async function handleAdminTracker(request, env) {
@@ -71,15 +87,15 @@ async function handleAdminTracker(request, env) {
     if (result.error) return json(400, { error: result.error });
     await env.DATA.put("settings.json", JSON.stringify(result.settings));
     const started = await startWorkflow(env, "publish");
-    return json(200, { ok: true, queued: started, message: started ? "Saved. The site updates in about 2–3 minutes." : "Saved. It will show after the next price check." });
+    return json(200, { ok: true, queued: started.ok, message: started.ok ? "Saved. The site updates in about 2–3 minutes." : `Saved, but the site update could not start (${started.reason}). It will show after the next price check.` });
   }
   if (request.method === "POST") {
     const action = url.searchParams.get("action");
     if (action === "check" || action === "models") {
       const started = await startWorkflow(env, "prices", action === "models" ? { force_model_audit: "true" } : {});
-      return json(started ? 202 : 503, started
+      return json(started.ok ? 202 : 502, started.ok
         ? { ok: true, queued: true, message: action === "models" ? "Catalogue scan started. Results appear in about 5 minutes." : "Price check started. Results appear in about 3 minutes." }
-        : { error: "The price check could not be started." });
+        : { error: `The price check could not be started: ${started.reason}.` });
     }
     // Refreshing one model's specs runs with the next full check on Cloudflare.
     if (action === "model") return json(202, { ok: true, queued: false });
@@ -217,6 +233,15 @@ const worker = {
       return json(500, { error: "Something went wrong. Please try again." });
     }
     return env.ASSETS.fetch(request);
+  },
+
+  // Cloudflare Cron Trigger (cloudflare/wrangler.jsonc): starts the price
+  // check every 3 hours. GitHub's own schedule is only a fallback because it
+  // skips runs when GitHub is busy.
+  async scheduled(controller, env, ctx) {
+    ctx.waitUntil(startWorkflow(env, "prices").then((started) => {
+      if (started.ok) console.log("Scheduled price check started");
+    }));
   },
 };
 
