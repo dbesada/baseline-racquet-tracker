@@ -1478,4 +1478,4 @@ select:disabled { color: #596760; opacity: .72; }
 }
 
 /* Admin status line on Cloudflare ("Saved. The site updates in about 2–3 minutes."). */
-.admin-notice { margin: 14px 0 0; padding: 10px 14px; border: 1px solid var(--line); border-radius: 12px; background: color-mix(in srgb, var(--lime) 18%, transparent); color: var(--ink); font-size: .82rem; font-weight: 700; }
+.admin-notice { max-width: 34rem; margin: 14px 0 0; padding: 10px 14px; border: 1px solid var(--line); border-radius: 12px; background: color-mix(in srgb, var(--lime) 18%, transparent); color: var(--ink); font-size: .82rem; font-weight: 700; }
