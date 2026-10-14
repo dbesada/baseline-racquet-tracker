@@ -7,6 +7,9 @@
 //   GET  /api/analytics    records one aggregate event (?event=…&detail=…)
 //   GET  /go/<offer id>    redirects to the stored retailer URL and logs the click
 //   /api/push/*            price-alert sign-ups (sent by the GitHub price check)
+//   GET  /api/history?model=<key>  a racquet's daily lowest prices (D1)
+//   GET  /tennis-racquets/, /tennis-racquets/<slug>, /sitemap.xml  pages for search engines,
+//                          built by the GitHub price check
 //
 // On the admin hostname (ADMIN_HOST, behind Cloudflare Access) a request with
 // a valid Access token is admin: it gets the admin dashboard, may change the
@@ -149,6 +152,45 @@ async function handleAnalytics(request, env) {
   return new Response(null, { status: 204, headers: { "cache-control": "no-store" } });
 }
 
+const htmlHeaders = { "content-type": "text/html; charset=utf-8", "cache-control": "public, max-age=300" };
+
+async function handleRacquetPages(request, env, ctx) {
+  const { pathname } = new URL(request.url);
+  if (request.method !== "GET" && request.method !== "HEAD") return new Response(null, { status: 405, headers: { allow: "GET, HEAD" } });
+  if (pathname === "/sitemap.xml") {
+    const sitemap = await env.DATA.get("sitemap.xml", { type: "stream" });
+    return sitemap ? new Response(sitemap, { headers: { "content-type": "application/xml; charset=utf-8", "cache-control": "public, max-age=3600" } }) : new Response("Not found", { status: 404 });
+  }
+  if (pathname === "/tennis-racquets") return Response.redirect(new URL("/tennis-racquets/", request.url).href, 301);
+  if (pathname === "/tennis-racquets/") {
+    const index = await env.DATA.get("racquets-index.html", { type: "stream" });
+    return index ? new Response(index, { headers: htmlHeaders }) : env.ASSETS.fetch(request);
+  }
+  const slug = /^\/tennis-racquets\/([a-z0-9-]{1,140})\/?$/.exec(pathname)?.[1];
+  const page = slug ? await env.DB.prepare("SELECT model_key, html FROM racquet_pages WHERE slug = ?1").bind(slug).first() : null;
+  if (!page) return new Response(notFoundPage, { status: 404, headers: { "content-type": "text/html; charset=utf-8", "x-robots-tag": "noindex" } });
+  // Count real visitors per racquet page (not crawlers), like other analytics.
+  if (request.method === "GET" && !looksAutomated(request.headers.get("user-agent"))) {
+    const accepted = acceptEvent("racquet_page", page.model_key);
+    if (accepted) {
+      const day = new Date().toISOString().slice(0, 10);
+      ctx.waitUntil(env.DB.batch([
+        env.DB.prepare("INSERT INTO analytics (day, event, detail, count) VALUES (?1, ?2, '', 1) ON CONFLICT (day, event, detail) DO UPDATE SET count = count + 1").bind(day, accepted.event),
+        env.DB.prepare("INSERT INTO analytics (day, event, detail, count) VALUES (?1, ?2, ?3, 1) ON CONFLICT (day, event, detail) DO UPDATE SET count = count + 1").bind(day, accepted.event, accepted.detail),
+      ]).catch(() => {}));
+    }
+  }
+  return new Response(page.html, { headers: htmlHeaders });
+}
+
+async function handleHistory(request, env) {
+  const modelKey = new URL(request.url).searchParams.get("model") ?? "";
+  if (!/^[a-z0-9-]{1,80}$/.test(modelKey)) return json(400, { error: "Unknown racquet." });
+  const { results = [] } = await env.DB.prepare("SELECT day, low, store FROM price_history WHERE model_key = ?1 AND day >= ?2 ORDER BY day")
+    .bind(modelKey, new Date(Date.now() - 366 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)).all();
+  return new Response(JSON.stringify({ modelKey, points: results }), { headers: { "content-type": "application/json; charset=utf-8", "cache-control": "public, max-age=600" } });
+}
+
 async function handleOutbound(request, env, ctx) {
   if (request.method !== "GET" && request.method !== "HEAD") return new Response(null, { status: 405, headers: { allow: "GET, HEAD" } });
   const url = new URL(request.url);
@@ -226,6 +268,8 @@ const worker = {
       if (pathname === "/api/tracker") return await (admin ? handleAdminTracker(request, env) : handleTracker(request, env));
       if (pathname === "/api/analytics") return await (admin && !url.searchParams.has("event") ? handleAdminAnalytics(request, env) : handleAnalytics(request, env));
       if (pathname.startsWith("/go/")) return await handleOutbound(request, env, ctx);
+      if (pathname === "/tennis-racquets" || pathname.startsWith("/tennis-racquets/") || pathname === "/sitemap.xml") return await handleRacquetPages(request, env, ctx);
+      if (pathname === "/api/history") return await handleHistory(request, env);
       if (pathname.startsWith("/api/push/")) return await handlePush(request, env);
       if (pathname.startsWith("/api/")) return json(404, { error: "Not found" });
     } catch (error) {

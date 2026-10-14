@@ -113,11 +113,22 @@ jobs:
           MARKETPLACE_BROWSER_URL: ${{ secrets.MARKETPLACE_BROWSER_URL }}
           EBAY_CLIENT_ID: ${{ secrets.EBAY_CLIENT_ID }}
           EBAY_CLIENT_SECRET: ${{ secrets.EBAY_CLIENT_SECRET }}
-      - name: Build the dashboard and buy links
-        run: node scripts/publish-cloudflare.mjs .data/baseline-monitor.json .data/baseline-settings.json out
+      - name: Load the price history and bundle the page helpers
+        run: |
+          # Creates any new tables first (safe to repeat), so the export never
+          # fails on a missing table; any other failure stops the run.
+          $WRANGLER d1 execute baseline --remote --file cloudflare/schema.sql
+          $WRANGLER d1 execute baseline --remote --json --command "SELECT model_key, day, low FROM price_history WHERE day >= date('now', '-400 days')" > out/history-export.json
+          node scripts/bundle-page-data.mjs out/page-data.mjs
+      - name: Build the dashboard, buy links and racquet pages
+        run: node scripts/publish-cloudflare.mjs .data/baseline-monitor.json .data/baseline-settings.json out out/history-export.json out/page-data.mjs
       - name: Publish
         run: |
           $WRANGLER d1 execute baseline --remote --file out/offers.sql
+          $WRANGLER d1 execute baseline --remote --file out/history.sql
+          $WRANGLER d1 execute baseline --remote --file out/pages.sql
+          $WRANGLER kv key put racquets-index.html --path out/racquets-index.html --namespace-id "$KV_NAMESPACE_ID" --remote
+          $WRANGLER kv key put sitemap.xml --path out/sitemap.xml --namespace-id "$KV_NAMESPACE_ID" --remote
           $WRANGLER kv key put dashboard.json --path out/dashboard.json --namespace-id "$KV_NAMESPACE_ID" --remote
           $WRANGLER kv key put dashboard-admin.json --path out/dashboard-admin.json --namespace-id "$KV_NAMESPACE_ID" --remote
           $WRANGLER kv key put operations.json --path out/operations.json --namespace-id "$KV_NAMESPACE_ID" --remote

@@ -20,14 +20,25 @@ export function subscriptionId(endpoint) {
 const money = new Intl.NumberFormat("en-CA", { style: "currency", currency: "CAD" });
 
 // Lowest in-stock price and its store for every racquet in the monitor state.
+// A price from this check wins over a stale one (a store that failed this
+// time keeps its last verified price for a while): stale prices are used only
+// for a racquet with no fresh price at all.
 export function bestPrices(state) {
-  const best = new Map();
+  const fresh = new Map();
+  const stale = new Map();
   for (const offer of Object.values(state?.offers ?? {})) {
     if (!offer || offer.modelKey === "other-sale" || offer.inStock === false || !Number.isFinite(offer.price)) continue;
+    const best = offer.sourceState === "stale" ? stale : fresh;
     const current = best.get(offer.modelKey);
     if (!current || offer.price < current.price) best.set(offer.modelKey, { price: offer.price, store: offer.store });
   }
-  return best;
+  for (const [modelKey, price] of stale) if (!fresh.has(modelKey)) fresh.set(modelKey, price);
+  return fresh;
+}
+
+// Only prices verified in this check, for the price history.
+export function freshBestPrices(state) {
+  return bestPrices({ offers: Object.fromEntries(Object.entries(state?.offers ?? {}).filter(([, offer]) => offer?.sourceState !== "stale")) });
 }
 
 export function createPriceAlerts({ storePath, keysPath, subject = "https://baseline-beta.besada.net", send, maxSubscriptions = 5000, maxAlerts = 20, now = Date.now, warn = console.warn }) {

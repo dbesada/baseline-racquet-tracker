@@ -1,2 +1,4 @@
 User-agent: *
 Disallow: /go/
+
+Sitemap: https://baseline-beta.besada.net/sitemap.xml

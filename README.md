@@ -97,3 +97,11 @@ Being built alongside the NAS; the NAS stays the live site until the switch.
 - **Deploy:** the same workflow deploys the site on every merge to `main`.
 - **Switches:** both jobs stay off until the repository variable `CLOUDFLARE_ACCOUNT_ID` is set. They need the secrets `CLOUDFLARE_API_TOKEN` (Workers Scripts, Workers KV Storage and D1: Edit) and `BASELINE_VAPID_KEYS` (`{"publicKey","privateKey"}` for price alerts). Optional secrets for used listings: `APIFY_TOKEN`, `BROWSERLESS_TOKEN`, `MARKETPLACE_BROWSER_URL`, `EBAY_CLIENT_ID`, `EBAY_CLIENT_SECRET`.
 - **Settings:** the owner's settings are the KV key `settings.json` (same format as `direct-data/baseline-settings.json`). Admin editing on Cloudflare is not built yet.
+
+### Racquet pages and price history (Cloudflare)
+
+- **Racquet pages:** every price check also builds `/tennis-racquets/<name>` for each racquet (`scripts/racquet-pages.mjs`), plus the `/tennis-racquets/` list and `/sitemap.xml`. They use the site's own spec and offer code, bundled with rolldown (`cloudflare/page-data.ts`, `scripts/bundle-page-data.mjs`). Pages are stored in D1 `racquet_pages`; the list and sitemap are stored in KV.
+- **Structured data:** a page gets Google Product data only when a store has the racquet. Freshly checked prices come first.
+- **Price history:** D1 `price_history` keeps each racquet's lowest freshly checked price per day (Toronto time) for 400 days. It drives the cards' trend bars (`dashboard.history`), the page charts and the pop-up chart (`GET /api/history?model=<key>`).
+- **Badges:** "Lowest price in 30 days" appears only once there are 30 days of history. Before that, after a week, it says "lowest since".
+- **Photos:** racquet photos stay static files under `/racquets/`. The Worker only runs first for `/tennis-racquets*` and `/sitemap.xml`.
