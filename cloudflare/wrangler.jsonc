@@ -8,7 +8,7 @@
     "directory": "../dist/client",
     "binding": "ASSETS",
     "not_found_handling": "404-page",
-    "run_worker_first": ["/api/*", "/go/*"]
+    "run_worker_first": ["/api/*", "/go/*", "/tennis-racquets", "/tennis-racquets/*", "/sitemap.xml"]
   },
   "kv_namespaces": [{ "binding": "DATA", "id": "0f0620ab764b40c9954553d68876617d" }],
   "d1_databases": [{ "binding": "DB", "database_name": "baseline", "database_id": "603e177d-31ea-4f5e-93c9-8d92b48fa9f5" }],
@@ -18,7 +18,9 @@
     "ADMIN_HOST": "baseline.besada.net",
     "ACCESS_TEAM_DOMAIN": "lively-credit-1a2e.cloudflareaccess.com",
     "ACCESS_AUD": "f9e0a71b302291da27aeae2bebf05f77559d446f5a7b034bac0cc5f324c0cfbe",
-    "GITHUB_REPO": "dbesada/baseline-racquet-tracker"
+    "GITHUB_REPO": "dbesada/baseline-racquet-tracker",
+    // The public address racquet pages, the sitemap and canonical links use.
+    "PUBLIC_URL": "https://baseline-beta.besada.net"
   },
   // Starts the GitHub price check every 3 hours (Cloudflare Cron Trigger, free plan).
   "triggers": { "crons": ["17 */3 * * *"] },

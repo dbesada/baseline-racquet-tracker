@@ -136,6 +136,8 @@ export function AnalyticsPanel({ analytics, loading, days, onDaysChange, onClose
             <div><span className="settings-label">TERMS PEOPLE TAP TO UNDERSTAND</span><CountList rows={beginner.terms.map((row) => ({ label: termLabel(row.term), count: row.count }))} empty="No explanations opened yet." /></div>
           </section>
 
+          <section className="analytics-section"><div><span className="settings-label">RACQUET PAGES VIEWED (FROM SEARCH ENGINES AND LINKS)</span><CountList rows={(beginner.racquetPages ?? []).map((row) => ({ label: row.name, count: row.count }))} empty="No racquet pages viewed yet." /></div></section>
+
           <section className="analytics-section"><div><span className="settings-label">PICKED FROM SEARCH</span><CountList rows={beginner.searchPicks.map((row) => ({ label: row.name, count: row.count }))} empty="No racquets picked from search yet." /></div></section>
 
           <section className="analytics-section analytics-split">

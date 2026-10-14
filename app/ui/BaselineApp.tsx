@@ -765,7 +765,7 @@ export function BaselineApp() {
       <footer>
         <a className="brand footer-brand" href={activeMarket === "retail" ? "#top" : "#used-top"}><span className="brand-mark"><i /><i /><i /></span> BASELINE</a>
         <p>{activeMarket === "retail" ? "Prices can change between checks. Shipping and tax are confirmed at the retailer." : "Used listings can change quickly. Inspect the frame and use buyer-protected payment."}{affiliateLinksOn && <> <a className="footer-disclosure" href={affiliateDisclosurePath}>Affiliate disclosure</a></>}</p>
-        <span>CAD · CANADA</span>
+        <span><a className="footer-disclosure" href="/tennis-racquets/">All racquets</a> · CAD · CANADA</span>
       </footer>
     </main>
   );

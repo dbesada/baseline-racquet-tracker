@@ -8,6 +8,8 @@ import type { Dashboard, Offer, RacquetSpec } from "./baseline-types";
 import { maxCompareFrames, modelBrand, modelImage, money, outboundHref, outboundRel, patternPresentation, relativeTime, standardizedSpecDisplay, validationPresentation } from "./baseline-catalogue";
 import { racquetHash } from "./racquet-link";
 import { PriceAlertControl } from "./PriceAlertControl";
+import { PriceHistory } from "./PriceHistory";
+import { racquetPagePath, racquetSlugs } from "../lib/racquet-slug";
 import { PatternBadge, PlayerFit, RacquetImage } from "./racquet-visuals";
 import { TermHelp, type GlossaryTerm } from "./TermTip";
 
@@ -94,6 +96,7 @@ export function RetailerDialog({ modelKey, data, offers, spec, tab, compared, co
             <button role="tab" id="racquet-tab-retailers" aria-selected={tab === "retailers"} aria-controls="racquet-panel" className={tab === "retailers" ? "active" : ""} onClick={() => onTabChange("retailers")}>Retailers{offers.length ? ` (${offers.length})` : ""}</button>
           </div>
           <div className="racquet-dialog-actions">
+            <a className="racquet-dialog-compare" href={racquetPagePath(racquetSlugs(data?.modelNames ?? {})[modelKey] ?? modelKey)} target="_blank" rel="noopener">Full page ↗</a>
             <CopyRacquetLink modelKey={modelKey} />
             <button className={`racquet-dialog-compare ${compared ? "on" : ""}`} disabled={!compared && compareFull} onClick={() => onToggleCompare(modelKey)}>{compared ? "✓ In comparison" : compareFull ? "Comparison full" : "+ Compare"}</button>
           </div>
@@ -118,6 +121,7 @@ export function RetailerDialog({ modelKey, data, offers, spec, tab, compared, co
           <div><span>Your target</span><strong>{money.format(target)}</strong></div>
           <div><span>Price spread</span><strong>{offers.length > 1 ? money.format((offers.at(-1)?.currentPrice ?? 0) - (offers[0]?.currentPrice ?? 0)) : "—"}</strong></div>
         </div>
+        <PriceHistory modelKey={modelKey} currentPrice={offers[0]?.currentPrice ?? null} />
         <div className="retailer-modal-list">
           {offers.map((offer, index) => {
             const delta = (offer.currentPrice ?? 0) - target;

@@ -41,6 +41,23 @@ CREATE TABLE IF NOT EXISTS analytics (
   PRIMARY KEY (day, event, detail)
 );
 
+-- Lowest in-stock price per racquet per day (Toronto date), kept 400 days.
+CREATE TABLE IF NOT EXISTS price_history (
+  model_key TEXT NOT NULL,
+  day TEXT NOT NULL,
+  low REAL NOT NULL,
+  store TEXT,
+  PRIMARY KEY (model_key, day)
+);
+
+-- Server-rendered racquet pages (/racquets/<slug>), rebuilt by every publish.
+CREATE TABLE IF NOT EXISTS racquet_pages (
+  slug TEXT PRIMARY KEY,
+  model_key TEXT NOT NULL,
+  html TEXT NOT NULL,
+  updated_at INTEGER NOT NULL
+);
+
 -- Price-alert subscriptions: the browser's push endpoint and keys with its
 -- alerts, as JSON (same shape as the NAS relay's file).
 CREATE TABLE IF NOT EXISTS push_subscriptions (
