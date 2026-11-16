@@ -14,7 +14,7 @@ export function catalogueDashboard(publicPreview = true) {
     .sort((left, right) => (left.name < right.name ? -1 : left.name > right.name ? 1 : 0));
   return {
     publicPreview,
-    offers: [], usedOffers: [], stringOffers: [], stringSourceResults: [], accessoryOffers: [], accessorySourceResults: [], ballOffers: [], ballSourceResults: [], saleOffers: [],
+    offers: [], usedOffers: [], stringOffers: [], stringSourceResults: [], accessoryOffers: [], accessorySourceResults: [], ballOffers: [], ballSourceResults: [], shoeOffers: [], shoeSourceResults: [], saleOffers: [],
     targets: { ...defaultTargets },
     usedTargets: { ...defaultUsedTargets },
     lastCheck: null,
@@ -156,6 +156,22 @@ export function mergeMonitorState(dashboard, state, now = Date.now()) {
     lastChecked: offer.lastChecked ?? state.checkedAt,
   }));
   dashboard.ballSourceResults = state.ballSourceResults ?? [];
+  dashboard.shoeOffers = (state.shoeOffers ?? []).map((offer) => ({
+    id: offer.id,
+    store: offer.store,
+    title: offer.title,
+    url: offer.url,
+    currentPrice: offer.price,
+    compareAtPrice: Number.isFinite(offer.compareAtPrice) ? offer.compareAtPrice : null,
+    inStock: offer.inStock !== false,
+    brand: offer.brand ?? "Other",
+    gender: offer.gender ?? "Not listed",
+    court: offer.court ?? "Not listed",
+    sizes: Array.isArray(offer.sizes) ? offer.sizes : [],
+    sourceState: offer.sourceState ?? "fresh",
+    lastChecked: offer.lastChecked ?? state.checkedAt,
+  }));
+  dashboard.shoeSourceResults = state.shoeSourceResults ?? [];
   dashboard.lastCheck = {
     checkedAt: state.checkedAt,
     storesChecked: retailerResults.length ? retailerResults.filter((result) => result.ok).length : stores.size,

@@ -229,6 +229,27 @@ const ballFeeds = [
   ["Rackets & Runners", "https://racketsandrunners.ca", "https://racketsandrunners.ca/collections/tennis-balls/products.json?limit=250"],
   ["Tennis Central", "https://www.tenniscentral.ca", "https://www.tenniscentral.ca/collections/tennis-balls/products.json?limit=250"],
 ];
+// Public Shopify shoe catalogues, checked November 2026. A catalogue whose
+// path names tennis shoes, or one marked "tennis-only" (a tennis store's own
+// shoe catalogue), counts as tennis even when a title doesn't say so; mixed
+// catalogues (Tenniszon also sells badminton shoes, Rackets & Runners running
+// shoes) keep only listings that say tennis.
+const shoeFeeds = [
+  ["Merchant of Tennis", "https://www.merchantoftennis.com", "https://www.merchantoftennis.com/collections/tennis-shoes/products.json?limit=250"],
+  ["Sports Virtuoso", "https://sportsvirtuoso.com", "https://sportsvirtuoso.com/collections/tennis-shoes/products.json?limit=250"],
+  ["RacquetGuys", "https://racquetguys.ca", "https://racquetguys.ca/collections/tennis-shoes-in-canada/products.json?limit=250"],
+  ["Tennis Giant", "https://www.tennisgiant.com", "https://www.tennisgiant.com/collections/tennis-mens-footwear/products.json?limit=250"],
+  ["Tennis Giant", "https://www.tennisgiant.com", "https://www.tennisgiant.com/collections/tennis-womens-footwear/products.json?limit=250"],
+  ["Tennis Giant", "https://www.tennisgiant.com", "https://www.tennisgiant.com/collections/tennis-junior-footwear/products.json?limit=250"],
+  ["RaquetteVille", "https://raquetteville.ca", "https://raquetteville.ca/collections/tennis-shoes/products.json?limit=250"],
+  ["Racquet Science", "https://racquetscience.ca", "https://racquetscience.ca/collections/tennis-shoes/products.json?limit=250"],
+  ["Just Tennis", "https://www.justtennis.ca", "https://www.justtennis.ca/collections/shoes/products.json?limit=250", "tennis-only"],
+  ["Rackets & Runners", "https://racketsandrunners.ca", "https://racketsandrunners.ca/collections/shoes/products.json?limit=250"],
+  ["Tenniszon", "https://www.tenniszon.com", "https://www.tenniszon.com/collections/shoes/products.json?limit=250"],
+  ["Tennis Central", "https://www.tenniscentral.ca", "https://www.tenniscentral.ca/collections/mens-tennis-footwear/products.json?limit=250"],
+  ["Tennis Central", "https://www.tenniscentral.ca", "https://www.tenniscentral.ca/collections/womens-tennis-footwear/products.json?limit=250"],
+  ["Tads Sporting Goods", "https://tadssportinggoods.ca", "https://tadssportinggoods.ca/collections/tennis-shoes/products.json?limit=250"],
+];
 const amazonSearches = [
   "Wilson Blade 98 v10", "Wilson Blade Pro Defyer 98 100", "Wilson Pro Staff Classic", "Yonex EZONE 98 100 Tour Plus", "Babolat Pure Aero 98 Gen9",
   "Babolat Pure Strike 98", "Babolat Pure Strike 100", "Babolat Boost Evo Aero Drive Wimbledon", "Yonex Percept 97",
@@ -1477,6 +1498,121 @@ async function fetchBallStore([store, origin, catalogUrl]) {
   });
 }
 
+const shoeCourtOrder = ["All court", "Clay court", "Hard court", "Not listed"];
+const shoeGenderOrder = ["Men's", "Women's", "Junior", "Not listed"];
+
+// Tennis shoes only. A shoe sold for both tennis and pickleball counts; a
+// pickleball-, padel- or running-only shoe, socks, insoles and laces do not.
+function isTennisShoeProduct(product, catalogUrl = "", tennisOnly = false) {
+  const title = String(product.title ?? "");
+  const evidence = `${title} ${product.product_type ?? ""} ${product.tags ?? ""}`;
+  let path = "";
+  try { path = new URL(catalogUrl).pathname; } catch { path = String(catalogUrl); }
+  if (/\b(?:socks?|insoles?|laces?|bags?|backpacks?|grips?|strings?|balls?|racq?uets?|rackets?|shirt|shorts|skirt|dress|hat|cap|visor|wristbands?|gift\s*card|slides?|sandals?|flip[\s-]*flops?|slippers?|recovery)\b/i.test(title)) return false;
+  if (!/\b(?:shoes?|footwear|sneakers?)\b/i.test(evidence) && !/shoes?|footwear/i.test(path)) return false;
+  if (/\b(?:running|trail|walking|golf|basketball|soccer|volleyball|squash|badminton|racquetball|hockey)\b/i.test(evidence) && !/\btennis\b/i.test(title)) return false;
+  if (/\b(?:pickleball|padel)\b/i.test(title) && !/\btennis\b/i.test(title)) return false;
+  return tennisOnly || /\btennis\b/i.test(evidence) || /tennis/i.test(path);
+}
+
+function tennisShoeGender(evidence) {
+  const text = String(evidence ?? "");
+  if (/\b(?:junior|juniors|jr|kids?|youth|boys?|girls?|children)\b/i.test(text)) return "Junior";
+  if (/\b(?:women|women's|womens|woman|ladies|lady)\b/i.test(text)) return "Women's";
+  if (/\b(?:men|men's|mens|man)\b/i.test(text)) return "Men's";
+  return "Not listed";
+}
+
+function tennisShoeCourt(evidence) {
+  const text = String(evidence ?? "");
+  if (/\bclay\b/i.test(text)) return "Clay court";
+  if (/\ball[\s-]*court\b/i.test(text) || /\bAC\b/.test(text)) return "All court";
+  if (/\bhard[\s-]*court\b/i.test(text) || /\bHC\b/.test(text)) return "Hard court";
+  return "Not listed";
+}
+
+// Turns a variant's size label into a North American size such as "9",
+// "10.5", "9 Wide" or "4Y" (youth). "M9 / W10.5" labels use the shoe's own
+// gender. Labels that only give EU or UK sizes are kept as written.
+function tennisShoeSize(label, gender = "Not listed") {
+  const text = String(label ?? "").replace(/½/g, ".5").trim();
+  if (!text) return null;
+  const wide = /\b(?:2E|4E|EE|EEE|wide)\b/i.test(text);
+  const youth = text.match(/\b(\d{1,2}(?:\.5)?)\s*(?:Y|K|C|youth|kids?)\b/i);
+  if (youth) return `${youth[1]}Y`;
+  const men = text.match(/\bM(?:en'?s)?\s*(\d{1,2}(?:\.5)?)\b/i) ?? text.match(/\b(\d{1,2}(?:\.5)?)(?:\.0)?\s*Men'?s\b/i);
+  const women = text.match(/\bW(?:omen'?s)?\s*(\d{1,2}(?:\.5)?)\b/i) ?? text.match(/\b(\d{1,2}(?:\.5)?)(?:\.0)?\s*Women'?s\b/i);
+  const us = text.match(/\bUS\s*(\d{1,2}(?:\.5)?)\b/i) ?? text.match(/\b(\d{1,2}(?:\.5)?)\s*US\b/i);
+  let size = null;
+  if (men && women) size = gender === "Women's" ? women[1] : men[1];
+  else if (us) size = us[1];
+  else if (men) size = men[1];
+  else if (women) size = women[1];
+  else if (!/\b(?:EU|EUR|UK|CM|JP)\b/i.test(text)) size = text.match(/^(\d{1,2}(?:\.5)?)\b/)?.[1] ?? null;
+  if (size && (Number(size) < 1 || Number(size) > 18)) size = null;
+  if (!size) return /\b(?:EU|EUR|UK)\s*\d/i.test(text) ? text : null;
+  return wide ? `${size} Wide` : size;
+}
+
+function shoeBrand(vendor, title = "") {
+  const known = ["Adidas", "Asics", "Babolat", "Diadora", "Fila", "Head", "K-Swiss", "Lacoste", "Mizuno", "New Balance", "Nike", "Prince", "Wilson", "Yonex"];
+  const evidence = `${vendor ?? ""} ${title ?? ""}`.toLowerCase();
+  return known.find((brand) => evidence.includes(brand.toLowerCase()))
+    ?? (String(vendor ?? "").trim() || String(title ?? "").split(/\s+/)[0] || "Other");
+}
+
+async function fetchShoeStore([store, origin, catalogUrl, scope]) {
+  const products = await fetchShopifyCatalogs(`${store} tennis shoes`, catalogUrl, 25000);
+  return products.flatMap((product) => {
+    if (!isTennisShoeProduct(product, catalogUrl, scope === "tennis-only")) return [];
+    // Fit comes from the title first, then the product type, then tags (some
+    // stores tag one shoe both men's and women's), then the catalogue's name.
+    const gender = [product.title, product.product_type, product.tags, new URL(catalogUrl).pathname.replace(/[-_/]+/g, " ")]
+      .map(tennisShoeGender).find((value) => value !== "Not listed") ?? "Not listed";
+    // A wide model ("2E Width", or a women's "D Width") is wide in every size,
+    // even when its size labels only give the number.
+    const wideModel = /\b(?:2E|4E|EE|EEE)\b|\bwide\b/i.test(product.title ?? "") || (gender === "Women's" && /\bD\s*width\b/i.test(product.title ?? ""));
+    // Court type comes from the title and product type only: store tags mark
+    // most shoes as suitable for several courts, or clay, regardless of model.
+    const court = tennisShoeCourt(`${product.title ?? ""} ${product.product_type ?? ""}`);
+    const optionNames = (product.options ?? []).map((option) => String(option?.name ?? option ?? ""));
+    const sizeIndex = Math.max(0, optionNames.findIndex((name) => /size/i.test(name)));
+    const widthIndex = optionNames.findIndex((name) => /width/i.test(name));
+    const sizes = new Map();
+    for (const variant of product.variants ?? []) {
+      const price = Number(variant.price);
+      if (!variant.available || !Number.isFinite(price) || price <= 0) continue;
+      const options = [variant.option1, variant.option2, variant.option3];
+      const width = widthIndex >= 0 ? String(options[widthIndex] ?? "") : "";
+      const parsed = tennisShoeSize(`${options[sizeIndex] ?? variant.title ?? ""} ${wideModel || /wide|2E|4E/i.test(width) ? "Wide" : ""}`, gender);
+      if (!parsed) continue;
+      // Junior shoes use youth sizes; a bare "4" on a junior shoe is a 4Y.
+      const size = gender === "Junior" ? parsed.replace(/^(\d{1,2}(?:\.5)?)(?= Wide$|$)/, "$1Y") : parsed;
+      const compareAtPrice = Number(variant.compare_at_price);
+      const current = sizes.get(size);
+      if (!current || price < current.price) {
+        sizes.set(size, { size, price, compareAtPrice: Number.isFinite(compareAtPrice) && compareAtPrice > price ? compareAtPrice : null });
+      }
+    }
+    if (!sizes.size) return [];
+    const sizeList = [...sizes.values()].sort((a, b) => a.size.localeCompare(b.size, "en-CA", { numeric: true }));
+    const cheapest = sizeList.reduce((best, entry) => (entry.price < best.price ? entry : best));
+    return [{
+      id: `shoe:${store}:${product.handle}`,
+      store,
+      title: product.title,
+      url: `${origin}/products/${product.handle}`,
+      price: cheapest.price,
+      compareAtPrice: cheapest.compareAtPrice,
+      inStock: true,
+      brand: shoeBrand(product.vendor, product.title),
+      gender,
+      court,
+      sizes: sizeList,
+    }];
+  });
+}
+
 async function fetchStore([store, origin, url, kind]) {
   if (kind === "amazon") return fetchAmazon(store, origin);
   if (kind === "woocommerce") return fetchWooCommerce(store, origin, url);
@@ -1700,6 +1836,24 @@ const ballCandidates = mergeFreshWithFallback(
 const ballOffers = [...new Map(ballCandidates.map((offer) => [offer.id, offer])).values()]
   .sort((a, b) => ballTypeOrder.indexOf(a.type) - ballTypeOrder.indexOf(b.type)
     || a.brand.localeCompare(b.brand) || a.title.localeCompare(b.title) || a.price - b.price);
+const activeShoeFeeds = enabledNames ? shoeFeeds.filter(([store]) => enabledNames.has(store)) : shoeFeeds;
+const shoeSettled = await settleInPool(activeShoeFeeds, fetchShoeStore, 5);
+const shoeSourceResults = shoeSettled.map((result, index) => ({
+  store: activeShoeFeeds[index][0],
+  ok: result.status === "fulfilled",
+  offers: result.status === "fulfilled" ? result.value.length : 0,
+  durationMs: result.durationMs,
+  error: result.status === "rejected" ? (result.reason?.message ?? "Unknown tennis-shoe feed failure") : null,
+}));
+const failedShoeStores = new Set(shoeSourceResults.filter((result) => !result.ok).map((result) => result.store));
+const shoeCandidates = mergeFreshWithFallback(
+  freshOffers(shoeSettled.flatMap((result) => result.status === "fulfilled" ? result.value : []), checkedAt),
+  staleFallback(previous.shoeOffers ?? [], failedShoeStores, previous.checkedAt, checkedAt),
+);
+const shoeOffers = [...new Map(shoeCandidates.map((offer) => [offer.id, offer])).values()]
+  .sort((a, b) => shoeGenderOrder.indexOf(a.gender) - shoeGenderOrder.indexOf(b.gender)
+    || shoeCourtOrder.indexOf(a.court) - shoeCourtOrder.indexOf(b.court)
+    || a.brand.localeCompare(b.brand) || a.title.localeCompare(b.title) || a.price - b.price);
 const specialOffers = collectedOffers
   .filter((offer) => specialEditionName(offer.title) && (offer.gripSizes ?? []).some((gripSize) => Object.hasOwn(gripMeasurements, gripSize)))
   .sort((a, b) => a.title.localeCompare(b.title) || a.price - b.price);
@@ -1894,9 +2048,9 @@ for (let offset = 0; offset < unresolvedModelKeys.length; offset += 6) {
 
 const specValidation = buildSpecValidation(offers, racquetSpecs);
 
-const allSourceResults = [...retailerResults, ...stringSourceResults, ...accessorySourceResults, ...ballSourceResults, ...usedSourceResults];
+const allSourceResults = [...retailerResults, ...stringSourceResults, ...accessorySourceResults, ...ballSourceResults, ...shoeSourceResults, ...usedSourceResults];
 const configuredSourceResults = allSourceResults.filter((result) => result.configured !== false);
-const allCurrentOffers = [...offers, ...stringOffers, ...accessoryOffers, ...ballOffers];
+const allCurrentOffers = [...offers, ...stringOffers, ...accessoryOffers, ...ballOffers, ...shoeOffers];
 const sourceHealth = {
   liveSources: configuredSourceResults.filter((result) => result.ok).length,
   totalSources: configuredSourceResults.length,
@@ -1925,6 +2079,8 @@ await writeFile(statePath, JSON.stringify({
   accessorySourceResults,
   ballOffers,
   ballSourceResults,
+  shoeOffers,
+  shoeSourceResults,
   racquetSpecs,
   specValidation,
   manufacturerSpecAuditVersion,
@@ -1948,6 +2104,8 @@ console.log(JSON.stringify({
   accessorySourceResults,
   ballOffersFound: ballOffers.length,
   ballSourceResults,
+  shoeOffersFound: shoeOffers.length,
+  shoeSourceResults,
   racquetSpecsFound: Object.keys(racquetSpecs).length,
   specValidation: Object.fromEntries(Object.entries(specValidation).map(([modelKey, result]) => [modelKey, { status: result.status, sources: result.sources.length, confirmedFields: result.confirmedFields, conflictFields: result.conflictFields }])),
   manufacturerSpecResults,

@@ -212,7 +212,7 @@ test("ships the finished Baseline tracker and its price API", async () => {
   assert.match(ui, /className="top-grip-select"/);
   assert.match(ui, /availableHeadSizes\.map/);
   assert.doesNotMatch(ui, /<option value="97">97 in²<\/option>/);
-  assert.match(ui, /\["all", \.\.\.brandList, "catalogue", "special", "strings", "balls", "accessories", "guide", "string-guide"\]/);
+  assert.match(ui, /\["all", \.\.\.brandList, "catalogue", "special", "strings", "balls", "shoes", "accessories", "guide", "string-guide"\]/);
   assert.match(ui, /Tennis strings/);
   assert.match(ui, /Find the right feel, type, and gauge/);
   assert.match(ui, /market[.]groupsByType[.]map/);

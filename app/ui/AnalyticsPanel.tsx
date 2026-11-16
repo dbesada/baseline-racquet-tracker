@@ -8,10 +8,10 @@ const dayLabel = (date: string) => new Date(`${date}T12:00:00Z`).toLocaleDateStr
 
 const kindLabels: Record<string, string> = {
   racquet: "Tracked racquets", sale: "Sale rack", special: "Special editions", used: "Used market",
-  string: "Strings", ball: "Balls", accessory: "Accessories", unknown: "Earlier clicks (no section recorded)",
+  string: "Strings", ball: "Balls", shoe: "Shoes", accessory: "Accessories", unknown: "Earlier clicks (no section recorded)",
 };
 const sectionLabels: Record<string, string> = {
-  catalogue: "Racquets", special: "Special editions", strings: "Strings", balls: "Balls", accessories: "Accessories", guide: "Racquet guide", "string-guide": "String guide",
+  catalogue: "Racquets", special: "Special editions", strings: "Strings", balls: "Balls", shoes: "Shoes", accessories: "Accessories", guide: "Racquet guide", "string-guide": "String guide",
 };
 const startHereLabels = { coach: "Help me choose", browse: "I know what I want", hide: "Hid the card" } as const;
 const saleFilterLabels: Record<string, string> = { all: "All", unstrung: "Unstrung frames", prestrung: "Pre-strung" };

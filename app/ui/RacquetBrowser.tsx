@@ -10,7 +10,7 @@ import { TermHelp } from "./TermTip";
 const preorderTitle = /pre[- ]?order|preorder|reserve now|coming soon/i;
 
 // Browse views that are not racquet lists.
-const nonRacquetViews: BrandViewKey[] = ["special", "strings", "balls", "accessories", "guide", "string-guide"];
+const nonRacquetViews: BrandViewKey[] = ["special", "strings", "balls", "shoes", "accessories", "guide", "string-guide"];
 
 // Catalogue filter state lives in the parent (through this hook) so the
 // choices survive switching to another tab and back.

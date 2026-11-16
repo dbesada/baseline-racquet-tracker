@@ -83,6 +83,8 @@ export type Dashboard = {
   accessorySourceResults?: Array<{ store: string; ok: boolean; offers: number; durationMs?: number; error?: string | null }>;
   ballOffers?: BallOffer[];
   ballSourceResults?: Array<{ store: string; ok: boolean; offers: number; durationMs?: number; error?: string | null }>;
+  shoeOffers?: ShoeOffer[];
+  shoeSourceResults?: Array<{ store: string; ok: boolean; offers: number; durationMs?: number; error?: string | null }>;
   usedOffers: Offer[];
   targets: Record<string, number>;
   usedTargets: Record<string, number>;
@@ -110,7 +112,7 @@ export type GripSize = "L0" | "L1" | "L2" | "L3" | "L4" | "L5";
 
 export type BrandKey = "all" | "Wilson" | "Yonex" | "Babolat" | "Head" | "Tecnifibre" | "Dunlop" | "Prince" | "Volkl";
 
-export type BrandViewKey = BrandKey | "catalogue" | "special" | "strings" | "balls" | "accessories" | "guide" | "string-guide";
+export type BrandViewKey = BrandKey | "catalogue" | "special" | "strings" | "balls" | "shoes" | "accessories" | "guide" | "string-guide";
 
 export type HeadSizeFilter = string;
 
@@ -139,6 +141,31 @@ export type AccessorySort = "featured" | "price-asc" | "price-desc" | "discount"
 export type BallType = "Extra duty" | "Regular duty" | "All court" | "Clay court" | "Pressureless" | "Junior" | "Other";
 
 export type BallTypeFilter = "all" | BallType;
+
+export type ShoeGender = "Men's" | "Women's" | "Junior" | "Not listed";
+
+export type ShoeCourt = "All court" | "Clay court" | "Hard court" | "Not listed";
+
+/** One in-stock size at one store, e.g. "9", "10.5", "9 Wide" or "4Y" (youth). */
+export type ShoeSize = { size: string; price: number; compareAtPrice: number | null };
+
+export type ShoeOffer = {
+  id: string;
+  store: string;
+  title: string;
+  url: string;
+  currentPrice: number | null;
+  compareAtPrice: number | null;
+  inStock: boolean;
+  brand: string;
+  gender: ShoeGender;
+  court: ShoeCourt;
+  sizes: ShoeSize[];
+  lastChecked: string;
+  sourceState?: "fresh" | "stale";
+};
+
+export type ShoeSort = "featured" | "price-asc" | "price-desc" | "discount";
 
 export type BallSort = "featured" | "price-asc" | "price-desc" | "discount";
 
@@ -270,6 +297,16 @@ export type AccessoryGroup = {
   detail: string;
   offers: AccessoryOffer[];
   bestOffer: AccessoryOffer;
+};
+
+export type ShoeGroup = {
+  key: string;
+  title: string;
+  brand: string;
+  gender: ShoeGender;
+  court: ShoeCourt;
+  offers: ShoeOffer[];
+  bestOffer: ShoeOffer;
 };
 
 export type BallGroup = {
