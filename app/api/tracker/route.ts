@@ -186,6 +186,8 @@ async function getDashboard(publicPreview = false) {
     accessorySourceResults: [],
     ballOffers: [],
     ballSourceResults: [],
+    shoeOffers: [],
+    shoeSourceResults: [],
     saleOffers: [],
     targets: targetMap,
     usedTargets: usedTargetMap,

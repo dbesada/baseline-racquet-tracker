@@ -10,6 +10,7 @@ const groups = [
   ["Strings", state.stringSourceResults],
   ["Accessories", state.accessorySourceResults],
   ["Balls", state.ballSourceResults],
+  ["Shoes", state.shoeSourceResults],
   ["Used", state.usedSourceResults],
 ];
 

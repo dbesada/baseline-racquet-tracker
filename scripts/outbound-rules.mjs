@@ -2,9 +2,9 @@
 // by the NAS relay (outbound-redirect.mjs), the Cloudflare Worker and the
 // GitHub price check.
 
-export const offerLists = ["specialOffers", "usedOffers", "stringOffers", "accessoryOffers", "ballOffers"];
+export const offerLists = ["specialOffers", "usedOffers", "stringOffers", "accessoryOffers", "ballOffers", "shoeOffers"];
 // Which part of the site a listing belongs to, for the admin click report.
-export const listKinds = { specialOffers: "special", usedOffers: "used", stringOffers: "string", accessoryOffers: "accessory", ballOffers: "ball" };
+export const listKinds = { specialOffers: "special", usedOffers: "used", stringOffers: "string", accessoryOffers: "accessory", ballOffers: "ball", shoeOffers: "shoe" };
 
 // Crawlers, link previews and scripts follow buy links too. They still get
 // redirected, but are not counted as visitor clicks. The user agent is only

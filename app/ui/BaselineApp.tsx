@@ -22,6 +22,7 @@ import { AffiliateNote } from "./AffiliateNote";
 import { racquetHash, racquetKeyFromHash } from "./racquet-link";
 import { AnalyticsPanel } from "./AnalyticsPanel";
 import { BallMarket, useBallMarket } from "./BallMarket";
+import { ShoeMarket, useShoeMarket } from "./ShoeMarket";
 import { catalogueMetrics as computeCatalogueMetrics, coachModels as computeCoachModels, marketplaceHealth as computeMarketplaceHealth, opportunityChoices as computeOpportunityChoices, resolveRacquetSpecs } from "./dashboard-insights";
 import { RacquetGuide, StringGuide } from "./EquipmentGuides";
 import { RacquetSearch } from "./RacquetSearch";
@@ -40,6 +41,7 @@ const browseHeadings: Partial<Record<BrandViewKey, { eyebrow: string; title: str
   special: { eyebrow: "LIMITED COLOURWAYS & COLLABORATIONS", title: "Special editions in every available grip." },
   strings: { eyebrow: "CANADIAN TENNIS STRING MARKET", title: "Find the right feel, type, and gauge." },
   balls: { eyebrow: "CANADIAN TENNIS BALL MARKET", title: "The right ball for every court." },
+  shoes: { eyebrow: "CANADIAN TENNIS SHOE MARKET", title: "Court shoes, in your size." },
   accessories: { eyebrow: "RACQUET ACCESSORIES ACROSS CANADA", title: "Everything around the frame, in one place." },
   guide: { eyebrow: "LEARN · RACQUETS", title: "What racquet numbers feel like on court." },
   "string-guide": { eyebrow: "LEARN · STRINGS", title: "What to put in the frame." },
@@ -47,7 +49,7 @@ const browseHeadings: Partial<Record<BrandViewKey, { eyebrow: string; title: str
 
 // Less-used sections sit behind "More"; both guides sit under "Learn".
 const moreSections: Array<{ key: BrandViewKey; label: string }> = [
-  { key: "special", label: "Special editions" }, { key: "balls", label: "Balls" }, { key: "accessories", label: "Accessories" },
+  { key: "special", label: "Special editions" }, { key: "balls", label: "Balls" }, { key: "shoes", label: "Shoes" }, { key: "accessories", label: "Accessories" },
 ];
 const startHereKey = "baseline-start-here";
 const visitKey = "baseline-visit-counted";
@@ -66,6 +68,7 @@ const browseLegends: Partial<Record<BrandViewKey, React.ReactNode>> = {
   special: <><span className="special-dot" /> Verified grip-level stock <span className="stock-dot" /> In stock</>,
   strings: <><span className="string-dot" /> Canadian prices <span className="stock-dot" /> In stock</>,
   balls: <><span className="string-dot" /> Package-matched prices <span className="stock-dot" /> In stock</>,
+  shoes: <><span className="string-dot" /> Size-matched prices <span className="stock-dot" /> In stock</>,
   accessories: <><span className="accessory-dot" /> Canadian prices <span className="stock-dot" /> In stock</>,
   guide: <><span className="string-dot" /> Plain language <span className="stock-dot" /> Published specs vary by setup</>,
   "string-guide": <><span className="string-dot" /> Plain language <span className="stock-dot" /> Published specs vary by setup</>,
@@ -113,6 +116,7 @@ export function BaselineApp() {
   const specialEditions = useSpecialEditions(data?.specialOffers ?? data?.offers, data?.gripSize ?? "L3");
   const stringMarket = useStringMarket(data?.stringOffers);
   const ballMarket = useBallMarket(data?.ballOffers);
+  const shoeMarket = useShoeMarket(data?.shoeOffers);
   const accessoryMarket = useAccessoryMarket(data?.accessoryOffers);
   const usedBoard = useUsedBoard(data);
 
@@ -644,6 +648,7 @@ export function BaselineApp() {
             {moreSections.map((section) => <button key={section.key} className={activeBrand === section.key ? "active" : ""} aria-pressed={activeBrand === section.key} onClick={() => {
               setActiveBrand(section.key);
               if (section.key === "balls") ballMarket.resetPaging();
+              if (section.key === "shoes") shoeMarket.resetPaging();
               if (section.key === "accessories") accessoryMarket.resetPaging();
             }}>{section.label}</button>)}
           </nav>}
@@ -673,6 +678,7 @@ export function BaselineApp() {
           : activeBrand === "string-guide" ? <StringGuide examples={stringMarket.guideExamples} />
           : activeBrand === "strings" ? <StringMarket market={stringMarket} loading={loading} />
           : activeBrand === "balls" ? <BallMarket market={ballMarket} loading={loading} />
+          : activeBrand === "shoes" ? <ShoeMarket market={shoeMarket} loading={loading} />
           : activeBrand === "accessories" ? <AccessoryMarket market={accessoryMarket} loading={loading} />
           : activeBrand === "special" ? <SpecialEditionMarket market={specialEditions} gripSize={data?.gripSize ?? "L3"} loading={loading} specs={resolvedRacquetSpecs} onOpenRacquet={openRacquet} />
           : <RacquetBrowser
@@ -687,7 +693,7 @@ export function BaselineApp() {
         <p className="eyebrow">HOW IT WORKS</p>
         <div className="steps">
           <div><span>01</span><strong>We check</strong><p>Canadian tennis stores, every 3 hours.</p></div>
-          <div><span>02</span><strong>We compare</strong><p>{activeBrand === "accessories" ? "Only in-stock racquet accessories in CAD, grouped across retailers." : activeBrand === "balls" ? "Only matching tennis-ball packages in CAD—never a single can against a case." : activeBrand === "strings" ? "Only in-stock tennis strings in CAD, grouped by family and gauge." : "Only new, in-stock frames in CAD—no demo noise."}</p></div>
+          <div><span>02</span><strong>We compare</strong><p>{activeBrand === "accessories" ? "Only in-stock racquet accessories in CAD, grouped across retailers." : activeBrand === "balls" ? "Only matching tennis-ball packages in CAD—never a single can against a case." : activeBrand === "shoes" ? "Only in-stock tennis shoes in CAD, priced for the size you pick." : activeBrand === "strings" ? "Only in-stock tennis strings in CAD, grouped by family and gauge." : "Only new, in-stock frames in CAD—no demo noise."}</p></div>
           <div><span>03</span><strong>You save</strong><p>Set a target price, then buy straight from the store.</p></div>
         </div>
       </section>

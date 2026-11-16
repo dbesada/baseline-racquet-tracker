@@ -1,7 +1,7 @@
 // Static catalogue data and pure helpers for the Baseline UI. Moved out of
 // BaselineApp.tsx unchanged so the component file holds only the component.
 
-import type { Offer, StringOffer, AccessoryOffer, BallOffer, Dashboard, GripSize, BrandKey, BrandViewKey, HeadSizeFilter, WeightFilter, PatternFilter, CatalogueSort, CatalogueMetric, StringType, StringFormat, AccessoryCategory, BallType, PublicPreferences, RacquetSpec, SpecValidation, UsedMarketplace, SpecialEditionGroup } from "./baseline-types";
+import type { Offer, StringOffer, AccessoryOffer, BallOffer, Dashboard, GripSize, BrandKey, BrandViewKey, HeadSizeFilter, WeightFilter, PatternFilter, CatalogueSort, CatalogueMetric, StringType, StringFormat, AccessoryCategory, BallType, ShoeCourt, ShoeGender, ShoeOffer, PublicPreferences, RacquetSpec, SpecValidation, UsedMarketplace, SpecialEditionGroup } from "./baseline-types";
 
 export const publicPreferencesKey = "baseline-public-preferences-v1";
 
@@ -54,7 +54,7 @@ export const accents: Record<string, string> = {
 
 export const brandList: Array<Exclude<BrandKey, "all">> = ["Wilson", "Yonex", "Babolat", "Head", "Tecnifibre", "Dunlop", "Prince", "Volkl"];
 
-export const brandViews: BrandViewKey[] = ["all", ...brandList, "catalogue", "special", "strings", "balls", "accessories", "guide", "string-guide"];
+export const brandViews: BrandViewKey[] = ["all", ...brandList, "catalogue", "special", "strings", "balls", "shoes", "accessories", "guide", "string-guide"];
 
 export const alphabeticalBrandList = [...brandList].sort((a, b) => a.localeCompare(b, "en-CA", { sensitivity: "base" }));
 
@@ -87,6 +87,53 @@ export const accessoryCategoryMarks: Record<AccessoryCategory, string> = {
 export const ballPageSize = 8;
 
 export const ballTypeOrder: BallType[] = ["Extra duty", "Regular duty", "All court", "Clay court", "Pressureless", "Junior", "Other"];
+
+export const shoePageSize = 8;
+
+export const shoeGenderOrder: ShoeGender[] = ["Men's", "Women's", "Junior", "Not listed"];
+
+export const shoeCourtOrder: ShoeCourt[] = ["All court", "Clay court", "Hard court", "Not listed"];
+
+// The visitor's shoe size is a per-browser convenience, like the other
+// public-beta choices; it never leaves the device.
+export const shoeSizeKey = "baseline-shoe-size";
+
+// Colour names that stores add to shoe titles ("White/Black", "Sail").
+const shoeColourWords = "white|black|blue|red|grey|gray|pink|green|navy|orange|yellow|silver|gold|purple|beige|lime|coral|mint|teal|cream|sand|sail|slate|volt|ivory|lilac|aqua|cyan|magenta|bronze|charcoal|fuchsia|lavender|maroon|olive|peach|rose|ruby|tan|turquoise|violet|multi|multicolou?r|glow";
+
+// One key per shoe model, so every colourway and store lands on the same card.
+// Wide models keep "wide" in the key and stay separate from the regular fit.
+export function shoeFamilyKey(offer: ShoeOffer) {
+  const brand = offer.brand.toLowerCase();
+  const escapedBrand = brand.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const wide = /\b(?:2e|4e|ee|eee|wide)\b/i.test(offer.title) || offer.sizes.some((entry) => entry.size.endsWith("Wide"));
+  const normalized = offer.title.toLowerCase()
+    .replace(/[´’]/g, "'")
+    .replace(/\([^)]*\)/g, " ")
+    .replace(/\s[-–]\s.*$/, " ")
+    .replace(/\b[a-z0-9.]+\/[a-z0-9./]+\b/g, " ")
+    .replace(new RegExp(`\\b(?:${shoeColourWords})\\b`, "g"), " ")
+    .replace(/\b[a-z]{1,3}\d{3,}[a-z0-9-]*\b/g, " ")
+    .replace(new RegExp(`\\b${escapedBrand}\\b`, "g"), " ")
+    .replace(/\b(?:tennis|shoes?|sneakers?|footwear|men'?s|women'?s|mens|womens|men|women|unisex|junior|jr|kids?|all[\s-]*court|hard[\s-]*court|ac|hc|2e|4e|ee|eee|wide|width)\b/g, " ")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+  return `${offer.gender}:${brand}:${normalized || offer.title.toLowerCase()}${wide ? ":wide" : ""}`;
+}
+
+// Shoe sizes in a sensible order: youth sizes first (little-kid 10.5Y–13.5Y
+// come before big-kid 1Y), then adult sizes by number, with wide fits right
+// after their standard size.
+export function compareShoeSizes(a: string, b: string) {
+  const rank = (size: string) => {
+    const number = Number.parseFloat(size);
+    const youth = /\dY\b/.test(size);
+    const order = !Number.isFinite(number) ? 99 : youth && number >= 8 ? number - 14 : number;
+    return [youth ? 0 : 1, order, /Wide/.test(size) ? 1 : 0] as const;
+  };
+  const [ra, rb] = [rank(a), rank(b)];
+  return ra[0] - rb[0] || ra[1] - rb[1] || ra[2] - rb[2] || a.localeCompare(b, "en-CA");
+}
 
 export const gripOptions: Array<{ key: GripSize; inches: string }> = [
   { key: "L0", inches: "4 in" },
