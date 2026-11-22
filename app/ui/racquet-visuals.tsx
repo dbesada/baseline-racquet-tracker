@@ -4,6 +4,7 @@ import Image from "next/image";
 import type { RacquetSpec } from "./baseline-types";
 import { modelImage, patternPresentation, standardizedSpecDisplay } from "./baseline-catalogue";
 import { playerFit } from "./player-fit";
+import { playRatings } from "./play-ratings";
 import { TermTip } from "./TermTip";
 
 export function PatternBadge({ pattern, compact = false }: { pattern?: string; compact?: boolean }) {
@@ -20,6 +21,17 @@ export function PlayerFit({ spec }: { spec?: RacquetSpec }) {
   const fit = playerFit(spec);
   if (!fit) return null;
   return <TermTip term="fit" className={`player-fit ${fit.level}`}><strong>{fit.label}</strong> <span>{fit.reasons.join(", ")}</span></TermTip>;
+}
+
+// "High launch" and "Easy to use" chips, each from published specs. A chip is
+// left out when a spec it needs is unknown.
+export function PlayRatings({ spec, detail = false }: { spec?: RacquetSpec; detail?: boolean }) {
+  const { launch, ease } = playRatings(spec);
+  if (!launch && !ease) return null;
+  return <span className={`play-ratings ${detail ? "detail" : ""}`}>
+    {launch && <TermTip term="launch" className={`play-rating launch-${launch.level}`}><strong>{launch.label}</strong>{detail && <span>{launch.detail}</span>}</TermTip>}
+    {ease && <TermTip term="ease" className={`play-rating ease-${ease.level}`}><strong>{ease.label}</strong>{detail && <span>{ease.detail}</span>}</TermTip>}
+  </span>;
 }
 
 // A racquet photo. On cards it opens the racquet's details pop-up

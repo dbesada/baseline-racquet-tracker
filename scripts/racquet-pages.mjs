@@ -40,6 +40,7 @@ a{color:inherit}main{max-width:960px;margin:0 auto;padding:20px 16px 56px}
 .brand{font-size:.78rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--forest)}
 h1{margin:4px 0 8px;font-size:clamp(1.8rem,5vw,2.6rem);line-height:1.1;letter-spacing:-.03em}
 .fit{color:var(--muted);margin:0 0 14px}.fit b{color:var(--ink)}
+.ratings{list-style:none;margin:-6px 0 14px;padding:0;color:var(--muted);font-size:.9rem}.ratings b{color:var(--ink)}
 .price{font-size:2.4rem;font-weight:900;letter-spacing:-.04em;line-height:1}.price small{display:block;font-size:.9rem;font-weight:600;letter-spacing:0;color:var(--muted);margin-top:6px}
 .badge{display:inline-block;margin:12px 8px 0 0;padding:5px 11px;border-radius:999px;font-size:.8rem;font-weight:800;background:color-mix(in srgb,var(--lime) 55%,transparent);color:var(--ink)}
 .badge.warn{background:color-mix(in srgb,#f0a58f 45%,transparent)}
@@ -75,7 +76,7 @@ function historyChart(history, summary) {
 ${summary ? `<p class="note">Lowest ${summary.coversMonth ? "in the last 30 days" : "since tracking began"}: ${escapeHtml(money.format(summary.low30))} on ${escapeHtml(shortDay(summary.low30Day))}. Tracking since ${escapeHtml(shortDay(summary.since))}.</p>` : ""}`;
 }
 
-// page: { siteUrl, slug, modelKey, name, brand, imageUrl, imageCredit, fit,
+// page: { siteUrl, slug, modelKey, name, brand, imageUrl, imageCredit, fit, ratings,
 //   specRows [{label,value}], specSource {name,url}, offers [{id,store,price,grips,preorder}],
 //   gripLabel, history [{day,low}], summary, checkedAt, affiliateOn, related [{slug,name,low}] }
 export function renderRacquetPage(page) {
@@ -120,6 +121,7 @@ export function renderRacquetPage(page) {
     ],
   };
 
+  const ratings = [page.ratings?.launch, page.ratings?.ease].filter(Boolean);
   const badges = [
     page.summary?.isLowest30 ? `<span class="badge">Lowest price in 30 days</span>` : "",
     page.summary?.isLowestSinceStart ? `<span class="badge">Lowest price since ${escapeHtml(shortDay(page.summary.since))}</span>` : "",
@@ -132,6 +134,7 @@ export function renderRacquetPage(page) {
 <div class="hero"><div>
 ${page.brand ? `<div class="brand">${escapeHtml(page.brand)}</div>` : ""}<h1>${escapeHtml(page.name)}</h1>
 ${page.fit ? `<p class="fit"><b>${escapeHtml(page.fit.label)}</b> · ${escapeHtml(page.fit.reasons.join(", "))}</p>` : ""}
+${ratings.length ? `<ul class="ratings">${ratings.map((rating) => `<li><b>${escapeHtml(rating.label)}</b> · ${escapeHtml(rating.detail)}</li>`).join("")}</ul>` : ""}
 ${best ? `<div class="price">${escapeHtml(money.format(best.price))}<small>lowest at ${escapeHtml(best.store)}${checked ? ` · checked ${escapeHtml(checked)}` : ""}</small></div>${badges}` : `<p>No tracked Canadian store has this racquet in stock right now. Baseline checks again every 3 hours.</p>`}
 <br><a class="button" href="/#racquet-${encodeURIComponent(page.modelKey)}">Open in Baseline · set a price alert</a>
 </div>${page.imageUrl ? `<img src="${escapeHtml(page.imageUrl)}" alt="${escapeHtml(page.name)}" width="220" height="280" loading="eager">` : ""}</div>

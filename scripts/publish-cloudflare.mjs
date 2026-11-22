@@ -4,6 +4,7 @@ import { pathToFileURL } from "node:url";
 import { historySummary, torontoDay } from "../app/lib/price-history.js";
 import { racquetPagePath, racquetSlugs } from "../app/lib/racquet-slug.js";
 import { playerFit } from "../app/ui/player-fit.js";
+import { playRatings } from "../app/ui/play-ratings.js";
 import { renderRacquetIndex, renderRacquetPage, renderSitemap } from "./racquet-pages.mjs";
 import { loadAffiliateLinks } from "./affiliate-links.mjs";
 import { applyPersistentSettings, catalogueDashboard, mergeMonitorState } from "./dashboard-build.mjs";
@@ -145,6 +146,7 @@ if (pageData) {
       imageUrl,
       mpn: spec.productCode,
       fit: playerFit(spec),
+      ratings: playRatings(spec),
       specRows,
       specSource: spec.source ? { name: spec.source, url: /^https:\/\//.test(spec.sourceUrl ?? "") ? spec.sourceUrl : null } : null,
       offers: model.offers.map((offer) => ({ id: offer.id, store: offer.store, price: offer.currentPrice, grips: offer.gripSizes?.length ?? 0, preorder: preorder.test(offer.title) && !offer.inStock, stale: offer.sourceState === "stale" })),

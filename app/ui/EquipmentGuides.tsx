@@ -1,5 +1,6 @@
 import type { StringGroup } from "./baseline-types";
 import { money, outboundHref, outboundRel } from "./baseline-catalogue";
+import { LaunchSimulator } from "./LaunchSimulator";
 
 const racquetGuideEntries = [
   ["Head size", "The size of the hitting area.", "97–98 in² rewards clean contact and precision; 100 in² is the versatile middle; 102+ in² gives a larger margin for error and easier depth."],
@@ -29,6 +30,10 @@ export function RacquetGuide() {
   return (
     <section className="racquet-guide" aria-label="Racquet specification guide">
       <p className="guide-intro">Use this as a translation layer for the comparison tool. Specifications describe tendencies—not guarantees—and the right combination matters more than any one number.</p>
+      <section className="launch-guide" aria-labelledby="launch-guide-title">
+        <div className="guide-section-heading"><span>TRY IT</span><h3 id="launch-guide-title">Launch and ease of use.</h3><p>Launch is how high the ball leaves the strings on the same swing. An open string pattern, a bigger head and lower tension all raise it, which makes a racquet easier to play with on a relaxed swing and harder to keep in on a fast one. Try the buttons, then move the sliders.</p></div>
+        <LaunchSimulator />
+      </section>
       <div className="guide-grid">
         {racquetGuideEntries.map(([title, definition, translation]) => <article className="guide-card" key={title}><span>SPEC</span><h3>{title}</h3><strong>{definition}</strong><p>{translation}</p></article>)}
       </div>
