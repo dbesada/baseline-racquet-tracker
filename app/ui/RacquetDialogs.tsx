@@ -10,7 +10,9 @@ import { racquetHash } from "./racquet-link";
 import { PriceAlertControl } from "./PriceAlertControl";
 import { PriceHistory } from "./PriceHistory";
 import { racquetPagePath, racquetSlugs } from "../lib/racquet-slug";
-import { PatternBadge, PlayerFit, RacquetImage } from "./racquet-visuals";
+import { LaunchSimulator } from "./LaunchSimulator";
+import { playRatings, stringPattern } from "./play-ratings";
+import { PatternBadge, PlayerFit, PlayRatings, RacquetImage } from "./racquet-visuals";
 import { TermHelp, type GlossaryTerm } from "./TermTip";
 
 const comparisonRows: Array<[string, keyof RacquetSpec]> = [
@@ -105,6 +107,11 @@ export function RetailerDialog({ modelKey, data, offers, spec, tab, compared, co
         <div id="racquet-panel" role="tabpanel" aria-labelledby={tab === "specs" ? "racquet-tab-specs" : "racquet-tab-retailers"}>
         {tab === "specs" ? <>
           <PlayerFit spec={spec} />
+          <PlayRatings spec={spec} detail />
+          <details className="launch-sim-details">
+            <summary data-analytics="term_tip" data-analytics-detail="launch-simulator">See how this racquet launches the ball</summary>
+            <LaunchSimulator key={modelKey} pattern={stringPattern(spec?.pattern)} head={Number.parseFloat(spec?.head ?? "")} racquetName={modelName} />
+          </details>
           <div className="racquet-specs-layout">
           <RacquetImage modelKey={modelKey} spec={spec} className="racquet-dialog-photo" width={300} height={400} sizes="(max-width: 720px) 60vw, 300px" alt={`${modelName} racquet`} onPreview={onPreviewImage} />
           <dl className="racquet-spec-list">
@@ -194,6 +201,8 @@ export function ComparisonDialog({ compareKeys, data, specs, refreshingModels, o
               {comparisonRows.map(([label, field]) => (
                 <tr className={field === "pattern" ? "comparison-pattern-row" : ""} key={field}><th>{label}</th>{compareKeys.map((key) => <td key={key}><SpecValue field={field} spec={specs[key]} /></td>)}</tr>
               ))}
+              <tr><th>Launch</th>{compareKeys.map((key) => <td key={key}>{playRatings(specs[key]).launch?.label ?? "—"}</td>)}</tr>
+              <tr><th>Ease of use</th>{compareKeys.map((key) => <td key={key}>{playRatings(specs[key]).ease?.label ?? "—"}</td>)}</tr>
               <tr><th>Independent validation</th>{compareKeys.map((key) => { const validation = validationPresentation(data?.specValidation?.[key]); return <td key={key}><span className={`spec-validation ${validation.tone}`}>{validation.label}</span></td>; })}</tr>
               <tr><th>Specification source</th>{compareKeys.map((key) => {
                 const spec = specs[key];

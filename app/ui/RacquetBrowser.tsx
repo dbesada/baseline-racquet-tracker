@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { BrandViewKey, CatalogueMetric, CatalogueSort, Dashboard, GripSize, HeadSizeFilter, PatternFilter, RacquetSpec, TargetEditor, WeightFilter } from "./baseline-types";
 import { accents, cataloguePageSize, featuredByBrand, gripOptions, matchesCatalogueFilters, maxCompareFrames, modelBrand, money, outboundHref, outboundRel, relativeTime, sortCatalogueKeys, specNumber, uniqueRetailerOffers, validationPresentation } from "./baseline-catalogue";
-import { CardSpecs, PatternBadge, PlayerFit, RacquetImage, RacquetName } from "./racquet-visuals";
+import { CardSpecs, PatternBadge, PlayerFit, PlayRatings, RacquetImage, RacquetName } from "./racquet-visuals";
 import { SaleRack } from "./SaleRack";
 import { TermHelp } from "./TermTip";
 
@@ -227,7 +227,7 @@ function ModelCard({ modelKey, index, featured, cards }: { modelKey: string; ind
         </div>
       </div>
       <div className="model-identity">
-        <div><span className="brand-kicker">{modelBrand(modelKey)}</span><h3><RacquetName modelKey={modelKey} name={data?.modelNames[modelKey] ?? modelKey} onOpen={cards.onOpenRacquet} /></h3>{spec && <CardSpecs spec={spec} />}<PatternBadge pattern={spec?.pattern} /><PlayerFit spec={spec} />{cards.refreshingModels.has(modelKey) && <span className="model-refresh-state" role="status"><i />Refreshing specs &amp; photo…</span>}{activeBrand === "catalogue" && <span className="card-spec-source"><span>Specs: {spec?.source ?? "Catalogue fallback"}</span><i className={`spec-validation ${validation.tone}`}>{validation.label}</i></span>}</div>
+        <div><span className="brand-kicker">{modelBrand(modelKey)}</span><h3><RacquetName modelKey={modelKey} name={data?.modelNames[modelKey] ?? modelKey} onOpen={cards.onOpenRacquet} /></h3>{spec && <CardSpecs spec={spec} />}<PatternBadge pattern={spec?.pattern} /><PlayerFit spec={spec} /><PlayRatings spec={spec} />{cards.refreshingModels.has(modelKey) && <span className="model-refresh-state" role="status"><i />Refreshing specs &amp; photo…</span>}{activeBrand === "catalogue" && <span className="card-spec-source"><span>Specs: {spec?.source ?? "Catalogue fallback"}</span><i className={`spec-validation ${validation.tone}`}>{validation.label}</i></span>}</div>
         <RacquetImage modelKey={modelKey} spec={spec} className="model-thumbnail" width={122} height={158} alt={`${data?.modelNames[modelKey] ?? modelKey} racquet`} sizes="122px" onPreview={cards.onOpenRacquet} action="details" />
       </div>
       <div className="price-row">

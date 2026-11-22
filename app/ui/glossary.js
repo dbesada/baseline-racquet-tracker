@@ -34,6 +34,16 @@ export const glossary = {
     title: "Pre-strung or unstrung",
     text: "Pre-strung racquets come with strings and are ready to play. Most are lighter starter or casual frames. Unstrung racquets are the frames regular players buy: a shop fits the strings you choose, usually for an extra fee.",
   },
+  launch: {
+    title: "Launch",
+    text: "How high the ball leaves the strings on the same swing. High launch clears the net easily and lands deep, which helps shorter or slower swings. Low launch flies flatter and is easier to aim, but you have to lift the ball yourself.",
+    more: "Worked out from the string pattern and head size. Your strings and swing change it too: lower tension raises it. The racquet’s pop-up has a simulator you can try.",
+  },
+  ease: {
+    title: "Ease of use",
+    text: "How much the racquet helps when your timing or contact isn’t perfect. Easy frames have a big hitting area and are light to swing. Demanding frames reward clean contact and a full, fast swing with more control.",
+    more: "Worked out from head size, weight and string pattern only. Feel matters too, so try a demo racquet if a store offers one.",
+  },
   fit: {
     title: "Who it suits",
     text: "A starting point worked out from head size and weight only. Feel matters too, so try a demo racquet if a store offers one, or ask Baseline Coach for a fuller match.",

@@ -1493,3 +1493,60 @@ select:disabled { color: #596760; opacity: .72; }
 .price-history-axis { display: flex; justify-content: space-between; gap: 8px; color: var(--muted); font-size: .7rem; }
 .price-history p { margin: 8px 0 0; color: var(--muted); font-size: .75rem; }
 @media (prefers-color-scheme: dark) { .price-history svg { color: #9ce6bb; } }
+
+/* Launch and ease-of-use ratings, and the launch simulator. */
+.play-ratings { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.play-rating { display: inline-flex; flex-wrap: wrap; align-items: baseline; gap: 2px 6px; padding: 3px 9px; border: 1px solid var(--line); border-radius: 999px; font-size: .66rem; line-height: 1.35; color: var(--muted); text-decoration: none; }
+.play-rating strong { color: var(--ink); font-weight: 800; }
+.play-rating strong::before { content: "● "; }
+.play-rating.launch-high strong::before, .play-rating.ease-easy strong::before { color: #33a56f; }
+.play-rating.launch-medium strong::before, .play-rating.ease-moderate strong::before { color: #d6a400; }
+.play-rating.launch-low strong::before, .play-rating.ease-demanding strong::before { color: #c2552f; }
+.play-ratings.detail { display: grid; gap: 6px; margin: 0 0 12px; }
+.play-ratings.detail .play-rating { justify-self: start; border-radius: 12px; padding: 6px 11px; font-size: .78rem; text-align: left; }
+.launch-sim-details { margin: 0 0 16px; border: 1px solid var(--line); border-radius: 14px; }
+.launch-sim-details summary { padding: 11px 14px; font-size: .8rem; font-weight: 800; color: var(--forest); cursor: pointer; }
+.launch-sim-details .launch-sim { padding: 0 14px 14px; }
+.launch-guide { margin-bottom: 26px; padding: 19px; border: 1px solid var(--line); border-radius: 16px; background: rgba(255,255,255,.42); }
+.launch-sim { display: grid; gap: 12px; min-width: 0; }
+.launch-sim-presets { display: flex; flex-wrap: wrap; gap: 6px; }
+.launch-sim-presets button { border: 1px solid var(--line); border-radius: 999px; padding: 7px 12px; background: transparent; color: var(--ink); font: inherit; font-size: .72rem; font-weight: 750; cursor: pointer; }
+.launch-sim-presets button:hover { border-color: var(--ink); }
+.launch-sim svg { display: block; width: 100%; height: auto; }
+.launch-sim svg text { fill: var(--muted); font-size: 11px; }
+.launch-sim-ground { stroke: var(--line); stroke-width: 1; }
+.launch-sim-court { fill: #33a56f; opacity: .55; }
+.launch-sim-net { stroke: var(--muted); stroke-width: 2; }
+.launch-sim-path { fill: none; stroke: #33a56f; stroke-width: 2.5; stroke-linecap: round; }
+.launch-sim-path.miss { stroke: #c2552f; }
+.launch-sim-other { fill: none; stroke: var(--muted); stroke-width: 1.5; stroke-dasharray: 5 5; opacity: .75; }
+.launch-sim-ball { fill: #33a56f; }
+.launch-sim-ball.miss { fill: #c2552f; }
+.launch-sim-results { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.launch-sim-results > div { display: grid; gap: 2px; padding: 9px 11px; border: 1px solid var(--line); border-radius: 12px; }
+.launch-sim-results span { color: var(--muted); font-size: .68rem; }
+.launch-sim-results strong { font-size: .95rem; }
+.launch-sim-results strong.good { color: #2b8d5e; }
+.launch-sim-results strong.miss { color: #c2552f; }
+.launch-sim-controls { display: grid; gap: 8px; }
+.launch-sim-controls label { display: grid; grid-template-columns: 7.5rem minmax(0, 1fr) 4.6rem; align-items: center; gap: 10px; font-size: .78rem; }
+.launch-sim-controls label > span { color: var(--muted); }
+.launch-sim-controls label > b { text-align: right; font-weight: 800; }
+.launch-sim-controls select { grid-column: 2 / -1; min-width: 0; padding: 6px 8px; border: 1px solid var(--line); border-radius: 8px; background: transparent; color: inherit; font: inherit; }
+.launch-sim-controls input[type="range"] { min-width: 0; width: 100%; accent-color: var(--forest); }
+.launch-sim-note { margin: 0; color: var(--muted); font-size: .72rem; line-height: 1.5; }
+@media (max-width: 620px) {
+  .launch-sim-results { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .launch-sim-results > div:last-child { grid-column: 1 / -1; }
+  .launch-sim svg text { font-size: 19px; }
+  .launch-sim-controls label { grid-template-columns: 6rem minmax(0, 1fr) 4.2rem; gap: 8px; }
+  .launch-guide { padding: 15px; }
+}
+@media (prefers-color-scheme: dark) {
+  .play-rating strong { color: #f5f7f8; }
+  .launch-guide { background: rgba(255,255,255,.04); }
+  .launch-sim-details summary { color: #9ce6bb; }
+  .launch-sim-results strong.good { color: #6fd3a0; }
+  .launch-sim-results strong.miss, .launch-sim-path.miss { color: #f0a58f; }
+  .launch-sim-controls select option { color: #10251d; }
+}

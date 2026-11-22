@@ -70,6 +70,7 @@ const page = {
   brand: "Wilson",
   imageUrl: "https://example.com/blade.jpg",
   fit: { label: "Good for experienced players", reasons: ["smaller, precise head", "medium weight"] },
+  ratings: { launch: { level: "medium", label: "Medium launch", detail: "a balance of net clearance & control" }, ease: null },
   specRows: [{ label: "Head size", value: "98 in² / 632 cm²" }],
   specSource: { name: "Wilson official", url: "https://www.wilson.com/blade" },
   offers: [{ id: "ATR Sports:blade:1", store: "ATR <b>Sports</b>", price: 279.95, grips: 4 }, { id: "x", store: "Tennis Giant", price: 299, grips: 2 }],
@@ -89,6 +90,8 @@ test("a racquet page has the price, stores, history, specs and Google's product 
   assert.doesNotMatch(html, /<b>Sports<\/b>/);
   assert.match(html, /href="\/go\/ATR%20Sports%3Ablade%3A1" rel="sponsored nofollow noreferrer"/);
   assert.match(html, /Lowest price in 30 days/);
+  assert.match(html, /<ul class="ratings"><li><b>Medium launch<\/b> · a balance of net clearance &amp; control<\/li><\/ul>/, "only the ratings that are known");
+  assert.doesNotMatch(renderRacquetPage({ ...page, ratings: { launch: null, ease: null } }), /class="ratings"/);
   assert.match(html, /href="\/#racquet-blade-v9"/);
   const blocks = [...html.matchAll(/<script type="application\/ld\+json">(.*?)<\/script>/g)].map((match) => JSON.parse(match[1]));
   const product = blocks.find((block) => block["@type"] === "Product");

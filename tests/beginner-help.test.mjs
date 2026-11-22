@@ -36,3 +36,31 @@ test("admin-only header controls stay hidden until the dashboard has loaded", as
   assert.match(app, /const adminView = data \? !data\.publicPreview : false;/);
   assert.match(app, /\{adminView && <button className="analytics-button"/);
 });
+
+test("launch and ease-of-use ratings follow published specs and guess nothing", async () => {
+  const { playRatings, simulateShot, stringPattern } = await import("../app/ui/play-ratings.js");
+  assert.deepEqual(stringPattern("16 × 19"), { mains: 16, crosses: 19 });
+  assert.deepEqual(stringPattern("18x20"), { mains: 18, crosses: 20 });
+  assert.equal(stringPattern("open"), null);
+  const levels = (spec) => { const { launch, ease } = playRatings(spec); return [launch?.level ?? null, ease?.level ?? null]; };
+  assert.deepEqual(levels({ head: "105 in²", weight: "275 g", pattern: "16 × 19" }), ["high", "easy"]);
+  assert.deepEqual(levels({ head: "100", weight: "300", pattern: "16x19" }), ["high", "moderate"]);
+  assert.deepEqual(levels({ head: "98", weight: "305", pattern: "16x19" }), ["medium", "demanding"]);
+  assert.deepEqual(levels({ head: "100", weight: "300", pattern: "16x20" }), ["medium", "moderate"]);
+  assert.deepEqual(levels({ head: "98", weight: "305", pattern: "18 × 20" }), ["low", "demanding"]);
+  // A missing spec leaves that rating out rather than guessing it.
+  assert.deepEqual(levels({ head: "100", weight: "300" }), [null, "moderate"]);
+  assert.deepEqual(levels({ head: "100", pattern: "16x19" }), ["high", null]);
+  assert.deepEqual(levels(undefined), [null, null]);
+
+  // The simulator: an open pattern launches higher than a dense one, a fast
+  // swing with an easy frame goes long, and a slow swing finds the net.
+  const open = { mains: 16, crosses: 19 };
+  const dense = { mains: 18, crosses: 20 };
+  const shot = (pattern, head, speedKmh) => simulateShot({ pattern, head, speedKmh });
+  assert.ok(shot(open, 100, 105).angle > shot(dense, 100, 105).angle + 2);
+  assert.equal(shot(open, 100, 105).outcome, "in");
+  assert.equal(shot(open, 105, 130).outcome, "long");
+  assert.equal(shot(dense, 98, 120).outcome, "in");
+  assert.equal(shot(dense, 98, 80).outcome, "net");
+});
